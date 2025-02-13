@@ -26,11 +26,11 @@ dev = [
     "coverage",  # testing
     "mypy",  # linting
     "pytest",  # testing
+    "pytest-asyncio",  # async testing
     "ruff"  # linting
 ]
 
 [project.urls]
-
 bugs = "https://github.com/cajias/wolfai/issues"
 changelog = "https://github.com/cajias/wolfai/blob/master/changelog.md"
 homepage = "https://github.com/cajias/wolfai"
@@ -40,9 +40,6 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.package-data]
 "*" = ["*.*"]
-
-
-
 
 # Mypy
 # ----
@@ -61,3 +58,30 @@ module = "tests.*"
 allow_untyped_defs = true
 disable_error_code = "attr-defined"
 
+# Pytest
+# ------
+
+[tool.pytest.ini_options]
+# Use pytest-asyncio as the default async backend
+asyncio_mode = "auto"
+
+# Configure test discovery
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Configure test running
+addopts = [
+    "--verbose",  # Verbose output
+    "--tb=short",  # Shorter traceback format
+    "--strict-markers",  # Strict handling of markers
+    "-ra",  # Show extra test summary info for all except passed tests
+]
+
+# Define custom markers
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks integration tests",
+    "gamelib: marks gamelib related tests",
+]
