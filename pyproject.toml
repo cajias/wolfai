@@ -18,7 +18,10 @@ classifiers = [
 ]
 license = {text = "Not open source"}
 dependencies = [
-  "typer"
+  "typer",
+  "langgraph",
+  "langchain-core",
+  "pyswip"
 ]
 
 [project.optional-dependencies]
