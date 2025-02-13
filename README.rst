@@ -90,11 +90,77 @@ Installation
 
 To run this system, install the following dependencies:
 
- .. code-block:: bash
+.. code-block:: bash
 
+    # Create and activate virtual environment
+    python -m venv venv
     source venv/bin/activate
+
+    # Install dependencies
     pip install -r requirements.txt
 
+    # Install development dependencies (optional)
+    pip install -r requirements_dev.txt
+
+
+Components
+=========
+
+Prolog Integration
+----------------
+
+The system uses Prolog for logical reasoning through an MCP (Model-Controller-Prolog) architecture:
+
+1. **MCP Server**: Handles Prolog execution requests
+2. **Prolog Agent**: Converts natural language to Prolog code
+3. **MCP Client**: Connects components to the Prolog engine
+
+To use the Prolog components:
+
+.. code-block:: bash
+
+    # Start the MCP server
+    python -m src.wolfai.tools.pl.prolog_mcp_server
+
+    # Run the example
+    python examples/prolog_agent_example.py
+
+
+Development
+==========
+
+Running Tests
+------------
+
+To run the test suite:
+
+.. code-block:: bash
+
+    # Run all tests
+    pytest
+
+    # Run specific test file
+    pytest tests/agents/test_prolog.py
+
+    # Run with coverage
+    pytest --cov=src/wolfai
+
+
+Project Structure
+---------------
+
+.. code-block::
+
+    wolfai/
+    ├── src/
+    │   └── wolfai/
+    │       ├── agents/          # AI agents (Prolog, Game)
+    │       ├── tools/           # Tool implementations
+    │       │   └── pl/         # Prolog-related tools
+    │       └── core/           # Core game logic
+    ├── tests/                  # Test files
+    ├── examples/               # Usage examples
+    └── docs/                   # Documentation
 
 
 Running the Game
@@ -107,6 +173,26 @@ To start a simulation:
    python run_game.py
 
 The AI will make decisions dynamically based on game state updates and probabilistic inference.
+
+
+Contributing
+============
+
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run the tests
+5. Submit a pull request
+
+For major changes, please open an issue first to discuss what you would like to change.
+
+
+License
+=======
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 
 Contributors

@@ -1,19 +1,31 @@
 """LangGraph agent for Prolog reasoning."""
 
-from typing import List, Optional
-from langchain_core.runnables import RunnableConfig
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.messages import BaseMessage
 import re
-from ..tools.pl.prolog import consult
+from typing import List, Optional, Dict, Any
+
+from langchain_core.messages import BaseMessage
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.runnables import RunnableConfig
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+
 
 class PrologAgent:
     """Agent that converts natural language to Prolog and executes it."""
 
-    def __init__(self, model):
+    def __init__(self, model, session: ClientSession):
         """Initialize with a language model for NL->Prolog conversion."""
         self.model = model
+        self.session = session
         self._clean_duplicates = True
+
+    async def initialize(self):
+        """Initialize the MCP session."""
+        await self.session.initialize()
+        # Make sure Prolog tool is available
+        tools = await self.session.list_tools()
+        if not any(t.name == "consult" for t in tools):
+            raise ValueError("Prolog tool 'consult' not found in available tools")
 
     def convert_to_prolog(self, question: str) -> str:
         """Convert natural language question to Prolog code."""
@@ -23,7 +35,8 @@ class PrologAgent:
 
         Question: {question}
 
-        Format your response as valid Prolog code without any explanations.
+        Format your response as valid Prolog code without any explanations or markdown.
+        Make sure to end queries with a period.
         """
 
         response = self.model.invoke(prompt.format(question=question))
@@ -33,9 +46,14 @@ class PrologAgent:
 
     def _extract_prolog_code(self, response: str) -> str:
         """Extract clean Prolog code from model response."""
-        # Remove markdown code blocks if present
-        code = re.sub(r'```prolog\n(.*?)\n```', r'\1', response, flags=re.DOTALL)
-        code = re.sub(r'```\n(.*?)\n```', r'\1', code, flags=re.DOTALL)
+        # First try to find code blocks
+        matches = re.findall(r'```(?:prolog)?\s*(.*?)\s*```', response, flags=re.DOTALL)
+        if matches:
+            code = matches[0]  # Take the first code block
+        else:
+            # No code blocks found, use the entire response
+            code = response
+
         code = code.strip()
 
         if self._clean_duplicates:
@@ -52,17 +70,18 @@ class PrologAgent:
 
         return code
 
-    def _format_solutions(self, result) -> str:
+    def _format_solutions(self, result: Dict[str, Any]) -> str:
         """Format Prolog solutions into readable text."""
-        if not result.success:
-            return f"Error: {result.error}"
+        if not result.get('success', False):
+            return f"Error: {result.get('error', 'Unknown error')}"
 
-        if not result.solutions:
+        solutions = result.get('solutions', [])
+        if not solutions:
             return "No solutions found."
 
         # Format solutions nicely
         lines = []
-        for solution in result.solutions:
+        for solution in solutions:
             if not solution:  # Empty solution means the query was satisfied
                 lines.append("Yes.")
                 continue
@@ -74,7 +93,7 @@ class PrologAgent:
 
         return "\n".join(lines)
 
-    def __call__(
+    async def __call__(
         self,
         messages: List[BaseMessage],
         config: Optional[RunnableConfig] = None,
@@ -90,17 +109,55 @@ class PrologAgent:
         # Convert to Prolog
         prolog_code = self.convert_to_prolog(question)
 
-        # Combine game rules with the generated code
-        full_code = self.GAME_RULES + "\n\n" + prolog_code
-
-        # Execute the Prolog code
-        result = consult(full_code)
+        # Execute the Prolog code using the MCP session
+        result = await self.session.call_tool("consult", arguments={"code": prolog_code})
 
         # Format the results
         response = self._format_solutions(result)
 
+        # Include the generated Prolog code in debug mode
+        if config and config.get('debug'):
+            response = f"Generated Prolog code:\n{prolog_code}\n\nResults:\n{response}"
+
         return AIMessage(content=response)
 
-def create_prolog_agent(model):
-    """Create a new Prolog agent with the given language model."""
-    return PrologAgent(model)
+
+async def create_prolog_agent(model, prolog_server_params: StdioServerParameters):
+    """Create a new Prolog agent with the given language model and server parameters."""
+    async with stdio_client(prolog_server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            agent = PrologAgent(model, session)
+            await agent.initialize()
+            return agent
+
+
+# Example usage
+if __name__ == "__main__":
+    import asyncio
+    from langchain_openai import ChatOpenAI
+    from dotenv import load_dotenv
+
+    load_dotenv()
+
+
+    async def main():
+        # Set up server parameters for the Prolog MCP server
+        server_params = StdioServerParameters(
+            command="python",
+            args=["-m", "src.wolfai.tools.pl.prolog_mcp_server"],
+            env=None
+        )
+
+        # Create language model
+        model = ChatOpenAI()
+
+        # Create and initialize agent
+        agent = await create_prolog_agent(model, server_params)
+
+        # Example usage
+        messages = [HumanMessage(content="If all humans are mortal and Socrates is human, is Socrates mortal?")]
+        response = await agent(messages, config={"debug": True})
+        print(response.content)
+
+
+    asyncio.run(main())
