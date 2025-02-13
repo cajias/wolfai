@@ -1,5 +1,5 @@
-"""Runtime package containing concrete implementations."""
+"""Runtime components for WolfAI."""
 
-from .prolog import PrologEngine, PrologResult
+from .prolog import PrologState, PrologResult, consult, execute
 
-__all__ = ['PrologEngine', 'PrologResult']
+__all__ = ['PrologState', 'PrologResult', 'consult', 'execute']

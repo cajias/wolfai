@@ -2,11 +2,11 @@
    :alt: Mermaid Logo
    :align: center
 
-=====================================================
+======================================================
 Werewolf AI System - Strategic AI for Social Deduction
-=====================================================
+======================================================
 
-This project aims to build an AI player for the **Werewolf** social deduction game. The AI should reason about the game, update its beliefs dynamically, and make optimal strategic decisions using **Prolog for logical inference, MiniZinc for constraint optimization, and probabilistic models (Bayesian Inference, HMMs, Kalman Filters, and POMDPs)**.
+This project aims to build an AI player for the **Werewolf** social deduction game. Werewolf is a game of deception and deduction in which players take on secret roles as either Villagers or Werewolves, with the goal of uncovering hidden identities through discussion, accusation, and voting. The AI should reason about the game, update its beliefs dynamically, and make optimal strategic decisions using **Prolog for logical inference, MiniZinc for constraint optimization, and probabilistic models (Bayesian Inference, HMMs, Kalman Filters, and POMDPs)**.
 
 .. contents::
    :depth: 2
@@ -15,7 +15,7 @@ This project aims to build an AI player for the **Werewolf** social deduction ga
 Overview
 ========
 
-The system consists of several key components working together:
+The system consists of several key components working together to enable intelligent, strategic decision-making by the AI. Each component plays a distinct role in processing game information, maintaining structured reasoning, and optimizing gameplay strategies.
 
 - **Arena (Game Master)**: Controls the game flow using a **state machine**.
 - **AI Player**: An autonomous agent that plays the game, tracking its beliefs and adjusting strategies.
@@ -72,7 +72,9 @@ The game follows a structured state machine managed by the **Arena**:
 AI Decision-Making
 ==================
 
-The AI operates as a **rational agent** in a **multi-agent system**, making decisions based on **belief updates, utility optimization, and reasoning under uncertainty**. Its decision-making process follows an **agent-based paradigm** with explicit knowledge representation and inference mechanisms:
+The AI decision-making process is structured to simulate human-like deduction and strategic reasoning, ensuring that the agent adapts dynamically to new information while optimizing its actions within the game environment.
+
+The AI operates as a **rational agent** in a **multi-agent system**, meaning it makes decisions based on a structured evaluation of available information, aiming to maximize its objectives while accounting for uncertainty and opponent behaviors., making decisions based on **belief updates, utility optimization, and reasoning under uncertainty**. Its decision-making process follows an **agent-based paradigm** with explicit knowledge representation and inference mechanisms:
 
 1. **Belief Update (Perception Processing)**: The agent continuously integrates new observations (accusations, defenses, votes) into its internal **world model**, adjusting its probabilistic belief distribution over player roles.
 2. **Logical Consistency Check (Prolog-Based Deduction)**: Using a **rule-based reasoning engine**, the agent ensures that its inferences do not contradict existing knowledge and prior deductions.
@@ -88,42 +90,27 @@ Installation
 
 To run this system, install the following dependencies:
 
-```
-pip install langgraph
-pip install prologpy  # Hypothetical Prolog wrapper
-pip install minizinc  # MiniZinc Python binding
-```
+ .. code-block:: bash
+
+    source venv/bin/activate
+    pip install -r requirements.txt
+
 
 
 Running the Game
 ================
 
 To start a simulation:
-```
-python run_game.py
-```
+
+.. code-block:: bash
+
+   python run_game.py
 
 The AI will make decisions dynamically based on game state updates and probabilistic inference.
 
 
-Next Steps
-==========
-
-- Implement **Prolog rule base** for logical deduction.
-- Define **MiniZinc constraints** for optimal decision-making.
-- Integrate **Bayesian updates and HMMs** for dynamic probability tracking.
-- Run test simulations to refine AI behavior.
-
-
 Contributors
 ============
-- **Lead Architect:** Rule
-- **AI Strategy & Design:** [You]
+- **Lead Architect:** Raul Cajias
+- **AI Strategy & Design:** [Raul, Claude, ChatGPT]
 - **Engineering Support:** Open for contributions!
-
-
-License
-=======
-
-This project is open-source under the MIT License. Feel free to contribute!
-
