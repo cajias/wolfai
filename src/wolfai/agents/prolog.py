@@ -5,45 +5,14 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.messages import BaseMessage
 import re
-from ..runtime.prolog import PrologEngine
+from ..tools.pl.prolog import consult
 
 class PrologAgent:
     """Agent that converts natural language to Prolog and executes it."""
-    
-    # Game-specific Prolog rules
-    GAME_RULES = """
-    % Clear any existing rules with these names
-    :- dynamic alive/1, vote_count/2, majority_voted/1.
-    :- retractall(alive(_)).
-    :- retractall(vote_count(_,_)).
-    :- retractall(majority_voted(_)).
-    
-    % Basic game rules
-    alive(X) :- 
-        (werewolf(X) ; villager(X)), 
-        \\+ defined_dead(X).
-            
-    % Rule for counting votes
-    vote_count(Person, Count) :-
-        findall(Voter, voted_for(Voter, Person), Voters),
-        length(Voters, Count).
-            
-    % Rule for majority votes - must be alive
-    majority_voted(X) :-
-        vote_count(X, Count),
-        Count >= 2,
-        alive(X).
-    
-    % Helper predicate to find living werewolves
-    living_werewolf(X) :-
-        werewolf(X),
-        alive(X).
-    """
 
     def __init__(self, model):
         """Initialize with a language model for NL->Prolog conversion."""
         self.model = model
-        self.engine = PrologEngine()
         self._clean_duplicates = True
 
     def convert_to_prolog(self, question: str) -> str:
@@ -68,7 +37,7 @@ class PrologAgent:
         code = re.sub(r'```prolog\n(.*?)\n```', r'\1', response, flags=re.DOTALL)
         code = re.sub(r'```\n(.*?)\n```', r'\1', code, flags=re.DOTALL)
         code = code.strip()
-        
+
         if self._clean_duplicates:
             # Remove duplicate facts
             lines = code.split('\n')
@@ -80,29 +49,29 @@ class PrologAgent:
                     seen.add(line)
                     cleaned.append(line)
             code = '\n'.join(cleaned)
-            
+
         return code
 
     def _format_solutions(self, result) -> str:
         """Format Prolog solutions into readable text."""
         if not result.success:
             return f"Error: {result.error}"
-        
+
         if not result.solutions:
             return "No solutions found."
-            
+
         # Format solutions nicely
         lines = []
         for solution in result.solutions:
             if not solution:  # Empty solution means the query was satisfied
                 lines.append("Yes.")
                 continue
-                
+
             parts = []
             for var, value in solution.items():
                 parts.append(f"{var} = {value}")
             lines.append(", ".join(parts))
-            
+
         return "\n".join(lines)
 
     def __call__(
@@ -120,13 +89,13 @@ class PrologAgent:
 
         # Convert to Prolog
         prolog_code = self.convert_to_prolog(question)
-        
+
         # Combine game rules with the generated code
         full_code = self.GAME_RULES + "\n\n" + prolog_code
 
         # Execute the Prolog code
-        result = self.engine.execute(full_code)
-        
+        result = consult(full_code)
+
         # Format the results
         response = self._format_solutions(result)
 

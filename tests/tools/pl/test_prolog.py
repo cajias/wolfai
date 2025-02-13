@@ -1,7 +1,7 @@
 """Tests for the functional Prolog execution engine."""
 
 import pytest
-from wolfai.runtime.prolog import (
+from wolfai.tools.pl.prolog import (
     PrologState, PrologResult,
     consult, execute, parse_prolog_code
 )
@@ -12,17 +12,17 @@ def test_parse_prolog_code():
     % Basic facts
     parent(john, mary).
     parent(john, peter).
-    
+
     % Rules
     grandparent(X, Y) :-
         parent(X, Z),
         parent(Z, Y).
-    
+
     % Empty lines and comments should be ignored
     % Like this one
     parent(mary, paul).
     """
-    
+
     facts = parse_prolog_code(code)
     assert len(facts) == 4
     assert "parent(john, mary)." in facts
@@ -37,7 +37,7 @@ def test_consult_basic():
     person(john).
     person(mary).
     """
-    
+
     state = consult(code)
     assert len(state.facts) == 3
     assert state.query is None
@@ -50,10 +50,10 @@ def test_execute_simple_query():
     person(john).
     person(mary).
     """)
-    
+
     # Execute query
     result, new_state = execute(state, "person(X)")
-    
+
     # Check result
     assert result.success
     assert len(result.solutions) == 3
@@ -61,7 +61,7 @@ def test_execute_simple_query():
     assert 'peter' in solutions
     assert 'john' in solutions
     assert 'mary' in solutions
-    
+
     # Check new state
     assert new_state.facts == state.facts
     assert new_state.query == "person(X)"
@@ -72,14 +72,14 @@ def test_execute_with_rules():
     parent(john, mary).
     parent(john, peter).
     parent(mary, paul).
-    
+
     grandparent(X, Y) :-
         parent(X, Z),
         parent(Z, Y).
     """)
-    
+
     result, new_state = execute(state, "grandparent(john, Y)")
-    
+
     assert result.success
     assert len(result.solutions) == 1
     assert result.solutions[0]['Y'] == 'paul'
@@ -91,11 +91,11 @@ def test_execute_error_handling():
     invalid(((()))).
     person(x).
     """)
-    
+
     result, new_state = execute(state, "person(X)")
     assert not result.success
     assert result.error is not None
-    
+
     # Invalid query
     state = consult("person(john).")
     result, new_state = execute(state, "invalid_query(")
@@ -117,7 +117,7 @@ def test_state_isolation():
     assert result1.success
     assert len(result1.solutions) == 1
     assert result1.solutions[0]['X'] == 'john'
-    
+
     # Second execution with different facts
     state2 = consult("city(london).")
     result2, _ = execute(state2, "person(X)")

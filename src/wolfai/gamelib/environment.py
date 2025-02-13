@@ -1,28 +1,17 @@
 """Environment interface for managing events and actor interactions."""
 
-from typing import Protocol, AsyncIterator, List, TypeVar
+from typing import Protocol, List, TypeVar
+
 from .types import Event
 
 GameStateType = TypeVar('GameStateType')
 
+
 class Environment(Protocol[GameStateType]):
     """Interface for the game environment that manages actor interactions."""
 
-    async def register_actor(self, actor_id: str) ->AsyncIterator[Event]:
-        """Stream of all game events relevant to the actor.
-
-        Events can be:
-        - Actions from actors
-        - Game state changes
-        - Results of actions
-        - System events
-        etc.
-
-        Usage:
-            async for event in environment.event_stream():
-                # Process event
-        """
-
+    async def run(self):
+        """Continuously process events from the queue and dispatch them."""
         ...
 
     async def emit(self, event: Event):
@@ -36,4 +25,8 @@ class Environment(Protocol[GameStateType]):
 
     def get_event_history(self) -> List[Event]:
         """Get the full history of game events."""
+        ...
+
+    async def dispatch_event(self, event: Event):
+        """Dispatch events to relevant actors."""
         ...

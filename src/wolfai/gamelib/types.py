@@ -5,12 +5,14 @@ from typing import Dict, Any
 import uuid
 import asyncio
 
+
 @dataclass
 class Event:
     """Represents any game event - both actions and system events."""
     type: str
     data: Dict[str, Any]
-    actor_id: str | None = None  # None for system events
+    from_id: str = "environment"
+    to_actor_id: str | None = None  # None for system events
     timestamp: float | None = None
     _id: str = field(default_factory=lambda: str(uuid.uuid4()))
 
