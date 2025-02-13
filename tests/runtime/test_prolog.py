@@ -1,7 +1,7 @@
 """Tests for the Prolog execution engine."""
 
 import pytest
-from wolfai.gamelib.prolog import PrologEngine, PrologResult
+from wolfai.runtime.prolog import PrologEngine, PrologResult
 
 @pytest.fixture
 def engine():
