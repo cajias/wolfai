@@ -1,11 +1,11 @@
 """LangGraph agent for Prolog reasoning."""
 
-from typing import Dict, List, Any, Optional
+from typing import List, Optional
 from langchain_core.runnables import RunnableConfig
-from langgraph.prebuilt import ToolMessage, HumanMessage, AssistantMessage
+from langgraph.prebuilt import HumanMessage, AssistantMessage
 from langchain_core.messages import BaseMessage
-from pyswip import Prolog
 import re
+from ..gamelib.prolog import PrologEngine
 
 class PrologAgent:
     """Agent that converts natural language to Prolog and executes it."""
@@ -13,7 +13,7 @@ class PrologAgent:
     def __init__(self, model):
         """Initialize with a language model for NL->Prolog conversion."""
         self.model = model
-        self.prolog = Prolog()
+        self.prolog = PrologEngine()
         
     def convert_to_prolog(self, question: str) -> str:
         """Convert natural language question to Prolog code."""
@@ -38,29 +38,6 @@ class PrologAgent:
         code = re.sub(r'```\n(.*?)\n```', r'\1', code, flags=re.DOTALL)
         return code.strip()
     
-    def execute_prolog(self, code: str) -> List[Dict[str, Any]]:
-        """Execute Prolog code and return results."""
-        # Clear previous state
-        self.prolog.retractall()
-        
-        # Split into statements and query
-        statements = code.split('\n')
-        query = statements[-1]  # Last line should be the query
-        facts_and_rules = '\n'.join(statements[:-1])
-        
-        # Assert facts and rules
-        try:
-            self.prolog.consult(facts_and_rules)
-        except Exception as e:
-            return [{"error": f"Error loading Prolog code: {str(e)}"}]
-            
-        # Execute query
-        try:
-            results = list(self.prolog.query(query))
-            return results if results else [{"result": "No solutions found"}]
-        except Exception as e:
-            return [{"error": f"Error executing query: {str(e)}"}]
-    
     def __call__(
         self,
         messages: List[BaseMessage],
@@ -78,13 +55,16 @@ class PrologAgent:
         prolog_code = self.convert_to_prolog(question)
         
         # Execute and get results
-        results = self.execute_prolog(prolog_code)
+        result = self.prolog.execute(prolog_code)
         
         # Format response
-        if "error" in results[0]:
-            response = f"Error: {results[0]['error']}"
+        if not result.success:
+            response = f"Error: {result.error}"
         else:
-            response = "Results:\n" + "\n".join(str(r) for r in results)
+            if result.solutions:
+                response = "Results:\n" + "\n".join(str(s) for s in result.solutions)
+            else:
+                response = "No solutions found."
             
         return AssistantMessage(content=response)
 
