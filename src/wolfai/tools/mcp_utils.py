@@ -1,0 +1,280 @@
+"""Utilities for MCP tool generation and inspection."""
+
+import inspect
+import typing
+from typing import Any, Callable, Dict, List, Optional, get_origin, get_args
+import docstring_parser
+import mcp.types as types
+from datetime import datetime, date
+
+
+def generate_example_value(annotation: Any) -> Any:
+    """Generate a representative example value for a type."""
+    # Handle Optional types
+    if get_origin(annotation) is typing.Union and type(None) in get_args(annotation):
+        inner_type = next(arg for arg in get_args(annotation) if arg != type(None))
+        return generate_example_value(inner_type)
+
+    # Handle basic types
+    type_examples = {
+        str: "example_text",
+        int: 42,
+        float: 3.14,
+        bool: True,
+        datetime: "2024-02-14T12:00:00",
+        date: "2024-02-14",
+    }
+
+    if annotation in type_examples:
+        return type_examples[annotation]
+
+    # Handle List types
+    if get_origin(annotation) is list:
+        if get_args(annotation):
+            inner_type = get_args(annotation)[0]
+            return [generate_example_value(inner_type)]
+        return ["example_item"]
+
+    # Handle Dict types
+    if get_origin(annotation) is dict:
+        args = get_args(annotation)
+        if len(args) == 2:
+            key_type, value_type = args
+            return {
+                str(generate_example_value(key_type)): generate_example_value(value_type)
+            }
+        return {"key": "value"}
+
+    return "example_value"
+
+
+def get_type_validation_rules(annotation: Any) -> Dict[str, Any]:
+    """Extract validation rules from type hints."""
+    rules = {}
+
+    # Handle basic types
+    if annotation == int:
+        rules.update({
+            "type": "number",
+            "format": "integer"
+        })
+    elif annotation == float:
+        rules.update({
+            "type": "number"
+        })
+    elif annotation == str:
+        rules.update({
+            "type": "string"
+        })
+    elif annotation == bool:
+        rules.update({
+            "type": "boolean"
+        })
+    elif annotation == datetime:
+        rules.update({
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$"
+        })
+    elif annotation == date:
+        rules.update({
+            "type": "string",
+            "format": "date",
+            "pattern": "^\d{4}-\d{2}-\d{2}$"
+        })
+
+    # Handle List types
+    if get_origin(annotation) is list:
+        rules.update({
+            "type": "array",
+            "items": {"type": "string"}  # Default
+        })
+        if get_args(annotation):
+            inner_type = get_args(annotation)[0]
+            rules["items"] = get_type_validation_rules(inner_type)
+
+    # Handle Dict types
+    if get_origin(annotation) is dict:
+        rules.update({
+            "type": "object"
+        })
+        args = get_args(annotation)
+        if len(args) == 2:
+            key_type, value_type = args
+            if key_type == str:  # Only handle string keys for now
+                rules["additionalProperties"] = get_type_validation_rules(value_type)
+
+    return rules
+
+
+def get_parameter_schema(
+    param: inspect.Parameter,
+    param_doc: Optional[docstring_parser.DocstringParam] = None
+) -> Dict[str, Any]:
+    """
+    Extract comprehensive JSON schema information from a parameter.
+
+    Args:
+        param: Parameter to analyze
+        param_doc: Optional docstring information for the parameter
+
+    Returns:
+        JSON schema object with type information, description, and examples
+    """
+    annotation = param.annotation
+    if annotation == inspect.Parameter.empty:
+        annotation = str  # Default to string
+
+    # Get base validation rules
+    schema = get_type_validation_rules(annotation)
+
+    # Generate example value
+    example = generate_example_value(annotation)
+
+    # Build descriptions
+    descriptions = []
+
+    # Add docstring description if available
+    if param_doc and param_doc.description:
+        descriptions.append(param_doc.description)
+
+    # Add type information
+    if get_origin(annotation) is typing.Union and type(None) in get_args(annotation):
+        descriptions.append("This parameter is optional.")
+        inner_type = next(arg for arg in get_args(annotation) if arg != type(None))
+        descriptions.append(f"When provided, it should be a {inner_type.__name__}.")
+
+    # Add default value info
+    if param.default is not param.empty:
+        if param.default is None:
+            descriptions.append("Defaults to None if not provided.")
+        else:
+            descriptions.append(f"Defaults to {repr(param.default)} if not provided.")
+    else:
+        descriptions.append("This parameter is required.")
+
+    # Add example usage
+    descriptions.append(f"Example value: {repr(example)}")
+
+    schema["description"] = " ".join(descriptions)
+
+    # Add example
+    schema["examples"] = [example]
+
+    # Add default if present
+    if param.default is not param.empty and param.default is not None:
+        schema["default"] = param.default
+
+    return schema
+
+
+def function_to_mcp_tool(func: Callable, name: Optional[str] = None) -> types.Tool:
+    """
+    Convert a Python function to an MCP tool using type hints and docstrings.
+
+    Args:
+        func: The function to convert
+        name: Optional custom name for the tool
+
+    Returns:
+        An MCP Tool object with schema derived from the function's signature
+    """
+    # Get function signature information
+    sig = inspect.signature(func)
+    doc = docstring_parser.parse(func.__doc__ or "")
+
+    # Build parameter schema
+    properties = {}
+    required = []
+
+    for param_name, param in sig.parameters.items():
+        # Skip self/cls for methods
+        if param_name in ("self", "cls"):
+            continue
+
+        # Get parameter description from docstring
+        param_doc = next((p for p in doc.params if p.arg_name == param_name), None)
+
+        # Build parameter schema
+        param_schema = get_parameter_schema(param, param_doc)
+        properties[param_name] = param_schema
+
+        # Track required parameters
+        if param.default == inspect.Parameter.empty:
+            required.append(param_name)
+
+    # Create input schema
+    input_schema = {
+        "type": "object",
+        "properties": properties,
+    }
+    if required:
+        input_schema["required"] = required
+
+    # Build description
+    descriptions = []
+
+    # Main description
+    if doc.short_description:
+        descriptions.append(doc.short_description)
+    if doc.long_description:
+        descriptions.append(doc.long_description)
+
+    # Add return info
+    if doc.returns:
+        descriptions.append(f"Returns: {doc.returns.description}")
+
+    # Add example if available
+    if doc.examples:
+        descriptions.append("Examples:")
+        for example in doc.examples:
+            descriptions.append(example)
+
+    # Create MCP tool
+    tool_name = name or func.__name__
+    return types.Tool(
+        name=tool_name,
+        description="\n\n".join(descriptions) or f"Execute {tool_name}",
+        inputSchema=input_schema,
+    )
+
+
+def generate_tools_from_module(
+    module: Any,
+    include_private: bool = False,
+    exclude: Optional[List[str]] = None
+) -> List[types.Tool]:
+    """
+    Generate MCP tools from all suitable functions in a module.
+
+    Args:
+        module: The module to inspect
+        include_private: Whether to include private functions (starting with _)
+        exclude: List of function names to exclude
+
+    Returns:
+        List of MCP Tool objects
+    """
+    exclude = exclude or []
+    tools = []
+
+    for name, obj in inspect.getmembers(module):
+        # Skip if in exclude list
+        if name in exclude:
+            continue
+
+        # Skip private functions unless explicitly included
+        if not include_private and name.startswith('_'):
+            continue
+
+        # Skip non-functions
+        if not inspect.isfunction(obj):
+            continue
+
+        try:
+            tool = function_to_mcp_tool(obj, name)
+            tools.append(tool)
+        except Exception as e:
+            print(f"Warning: Could not convert {name} to tool: {e}")
+
+    return tools

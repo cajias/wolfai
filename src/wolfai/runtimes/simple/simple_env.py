@@ -1,6 +1,7 @@
 import asyncio
 from typing import List
 
+from src.wolfai.runtimes.simple import SimpleActor
 from ...gamelib import Actor, Event, Environment
 
 
@@ -50,3 +51,34 @@ class SimpleEnvironment(Environment):
     def stop(self):
         """Stop the environment's event loop."""
         self._running = False
+
+
+async def run_game():
+    actors = [
+        SimpleActor("player1", env=None),  # Placeholder env
+        SimpleActor("player2", env=None),
+    ]
+    env = SimpleEnvironment(actors)
+
+    # Assign the environment to each actor
+    for actor in actors:
+        actor.env = env  # ✅ Now actors can call `env.emit()`
+
+    # Start the environment event loop
+    env_task = asyncio.create_task(env.run())
+
+    # Emit an event that will trigger actors to act
+    await env.emit(Event(type="your_turn", to_actor_id="player1", data={}))
+
+    # Let the system run for a bit
+    await asyncio.sleep(1)
+
+    # Stop the environment
+    env.stop()
+    await asyncio.sleep(0.1)  # Allow graceful shutdown
+
+    print("Event History:", env.get_event_history())
+
+
+if __name__ == "__main__":
+    asyncio.run(run_game())

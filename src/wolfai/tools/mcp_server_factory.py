@@ -1,0 +1,181 @@
+"""Factory for creating generic MCP servers from Python modules."""
+
+import inspect
+from typing import Any, Callable, Dict, Optional
+
+import anyio
+import mcp.types as types
+from mcp.server.lowlevel import Server
+
+from src.wolfai.tools.mcp_utils import generate_tools_from_module
+
+
+class ModuleServer:
+    """A generic MCP server that can expose any module's functions."""
+
+    def __init__(self, module: Any, name: str, session_store: Optional[Dict] = None):
+        """
+        Initialize the server with a module to expose.
+
+        Args:
+            module: The Python module whose functions to expose
+            name: Name for the server
+            session_store: Optional dictionary to use for session storage
+        """
+        self.module = module
+        self.name = name
+        self.session_store = session_store or {}
+        self.function_cache = {}  # Cache function lookup
+
+    def _get_function(self, name: str) -> Callable:
+        """Get function from module by name."""
+        if name not in self.function_cache:
+            self.function_cache[name] = getattr(self.module, name)
+        return self.function_cache[name]
+
+    @staticmethod
+    def _format_result(result: Any) -> list[types.TextContent]:
+        """Format any result into MCP text content."""
+        if isinstance(result, (list, tuple)) and len(result) == 2:
+            # Handle case where function returns (result, state)
+            result, state = result
+
+        if isinstance(result, types.TextContent):
+            return [result]
+        elif isinstance(result, list) and all(isinstance(x, types.TextContent) for x in result):
+            return result
+        else:
+            # Convert any other result to string representation
+            return [types.TextContent(type="text", text=str(result))]
+
+    async def handle_tool_call(self, name: str, arguments: dict) -> list[types.TextContent]:
+        """Generic handler for tool calls."""
+        try:
+            # Extract session management
+            session_id = arguments.pop("session_id", "default")
+
+            # Get the function
+            func = self._get_function(name)
+            sig = inspect.signature(func)
+
+            # Handle state if function takes state parameter
+            if "state" in sig.parameters:
+                state = self.session_store.get(session_id)
+                if state is not None:
+                    arguments["state"] = state
+
+            # Call function
+            result = func(**arguments)
+
+            # Update session state if returned
+            if isinstance(result, tuple) and len(result) == 2:
+                result, new_state = result
+                self.session_store[session_id] = new_state
+
+            return self._format_result(result)
+
+        except Exception as e:
+            return [types.TextContent(type="text", text=f"Error: {str(e)}")]
+
+    def create_server(self) -> Server:
+        """Create and configure the MCP server."""
+        app = Server(self.name)
+
+        @app.call_tool()
+        async def tool_handler(name: str, arguments: dict) -> list[types.TextContent]:
+            return await self.handle_tool_call(name, arguments)
+
+        @app.list_tools()
+        async def list_tools() -> list[types.Tool]:
+            tools = generate_tools_from_module(self.module)
+
+            # Add session_id parameter to all tools
+            for tool in tools:
+                tool.inputSchema["properties"]["session_id"] = {
+                    "type": "string",
+                    "description": "Session identifier for state management",
+                    "default": "default"
+                }
+
+            return tools
+
+        return app
+
+
+def create_server(
+    module: Any,
+    name: str,
+    session_store: Optional[Dict] = None
+) -> ModuleServer:
+    """
+    Create a new MCP server for a module.
+
+    Args:
+        module: The Python module to expose
+        name: Name for the server
+        session_store: Optional dictionary to use for session storage
+
+    Returns:
+        Configured ModuleServer instance
+    """
+    return ModuleServer(module, name, session_store)
+
+
+def run_server(
+    module: Any,
+    name: str = None,
+    port: int = 8000,
+    transport: str = "stdio",
+    session_store: Optional[Dict] = None
+) -> None:
+    """
+    Run an MCP server for a module.
+
+    Args:
+        module: The Python module to expose
+        name: Optional name for the server (defaults to module name)
+        port: Port to use for SSE transport
+        transport: Transport type ("stdio" or "sse")
+        session_store: Optional dictionary to use for session storage
+    """
+    if name is None:
+        name = f"mcp-{module.__name__.split('.')[-1]}"
+
+    server = create_server(module, name, session_store)
+    app = server.create_server()
+
+    if transport == "sse":
+        from mcp.server.sse import SseServerTransport
+        from starlette.applications import Starlette
+        from starlette.routing import Mount, Route
+
+        sse = SseServerTransport("/messages/")
+
+        async def handle_sse(request):
+            async with sse.connect_sse(
+                request.scope, request.receive, request._send
+            ) as streams:
+                await app.run(
+                    streams[0], streams[1], app.create_initialization_options()
+                )
+
+        starlette_app = Starlette(
+            debug=True,
+            routes=[
+                Route("/sse", endpoint=handle_sse),
+                Mount("/messages/", app=sse.handle_post_message),
+            ],
+        )
+
+        import uvicorn
+        uvicorn.run(starlette_app, host="0.0.0.0", port=port)
+    else:
+        from mcp.server.stdio import stdio_server
+
+        async def arun():
+            async with stdio_server() as streams:
+                await app.run(
+                    streams[0], streams[1], app.create_initialization_options()
+                )
+
+        anyio.run(arun)
