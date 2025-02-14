@@ -1,8 +1,6 @@
 """Tests for the functional Prolog execution engine."""
 
-import pytest
 from wolfai.tools.pl.prolog import (
-    PrologState, PrologResult,
     consult, execute, parse_prolog_code
 )
 

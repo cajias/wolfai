@@ -1,7 +1,6 @@
 # Core dependencies
 langchain-core>=0.1.0
 langchain-openai>=0.0.5
-mcp-client>=0.1.0
 python-dotenv>=1.0.0
 
 # Prolog integration
@@ -10,3 +9,12 @@ swiplserver>=1.0.0
 # Type hints and documentation
 typing-extensions>=4.8.0
 docstring-parser>=0.15
+pyswip~=0.3.2
+click~=8.1.8
+docstring_parser~=0.16
+mcp~=1.2.1
+anyio~=4.8.0
+typer~=0.15.1
+rich~=13.9.4
+wolfai~=0.1.0
+pytest~=8.3.4

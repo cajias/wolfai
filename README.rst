@@ -1,7 +1,3 @@
-.. image:: https://mermaid-js.github.io/mermaid/img/logo.svg
-   :alt: Mermaid Logo
-   :align: center
-
 ======================================================
 Werewolf AI System - Strategic AI for Social Deduction
 ======================================================
