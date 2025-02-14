@@ -7,6 +7,7 @@ from src.wolfai.tools.pl.prolog_chains import (
     create_converter_prompt,
     create_interpreter_prompt
 )
+from tests.tools.pl.test_mcp_mock import MockMCPSession
 
 
 class TestPrologChainPrompt:
@@ -26,9 +27,10 @@ class TestPrologChainPrompt:
         # Check message sequence
         messages = prompt.messages
         
-        # Verify system instruction
-        assert messages[0].role == "system"
+        # Verify initial instruction
+        assert messages[0].role == "assistant"
         assert messages[0].content.type == "text"
+        assert "help answer questions" in messages[0].content.text
         
         # Verify example sequence
         example_start = None
@@ -39,16 +41,13 @@ class TestPrologChainPrompt:
         
         assert example_start is not None
         assert messages[example_start + 1].role == "assistant"  # Conversion
-        assert messages[example_start + 2].role == "function"   # Execution
-        assert messages[example_start + 3].role == "assistant"  # Interpretation
+        assert messages[example_start + 2].role == "assistant"  # Interpretation
         
-        # Verify function calls
-        function_messages = [msg for msg in messages if msg.role == "function"]
-        assert len(function_messages) > 0
-        for msg in function_messages:
-            assert "function" in msg.__dict__
-            assert "name" in msg.function
-            assert "arguments" in msg.function
+        # Verify placeholders
+        assert any(
+            "{question}" in msg.content.text
+            for msg in messages
+        )
 
     def test_chain_placeholders(self):
         """Test that the chain has all necessary placeholders."""
@@ -57,15 +56,13 @@ class TestPrologChainPrompt:
         # Collect all text content
         all_text = ""
         for msg in prompt.messages:
-            if msg.content.type == "text":
-                all_text += msg.content.text
-            elif msg.content.type == "function_call":
-                all_text += str(msg.content.function_call)
+            all_text += msg.content.text
         
         # Check for required placeholders
         assert "{question}" in all_text
         assert "{generated_prolog}" in all_text
         assert "{interpretation}" in all_text
+        assert "{execution_result}" in all_text
 
 
 class TestConverterPrompt:
@@ -82,12 +79,12 @@ class TestConverterPrompt:
         
         # Check message sequence
         messages = prompt.messages
-        assert len(messages) >= 2  # At least system instruction and template
+        assert len(messages) >= 2  # At least instruction and template
         
-        # Verify system message
-        assert messages[0].role == "system"
+        # Verify instruction message
+        assert messages[0].role == "assistant"
         assert messages[0].content.type == "text"
-        assert "Convert" in messages[0].content.text
+        assert "convert" in messages[0].content.text.lower()
         
         # Verify template
         assert messages[-1].role == "user"
@@ -116,9 +113,9 @@ class TestInterpreterPrompt:
         assert len(messages) >= 2
         
         # Verify system message
-        assert messages[0].role == "system"
+        assert messages[0].role == "assistant"
         assert messages[0].content.type == "text"
-        assert "Interpret" in messages[0].content.text
+        assert "interpret" in messages[0].content.text.lower()
         
         # Verify template contains all placeholders
         final_msg = messages[-1].content.text
@@ -136,18 +133,29 @@ class TestIntegration:
         converter = create_converter_prompt()
         interpreter = create_interpreter_prompt()
         
-        # Verify converter prompt name matches chain's function call
-        conversion_msg = next(
-            msg for msg in chain.messages 
-            if msg.content.type == "function_call"
-            and msg.content.function_call["name"] == "convert_to_prolog"
+        # Check that the chain includes conversion and interpretation stages
+        assert any(
+            "convert" in msg.content.text.lower()
+            for msg in chain.messages
+            if msg.role == "assistant"
         )
-        assert conversion_msg is not None
         
-        # Verify interpreter can handle chain's output format
+        assert any(
+            "execution" in msg.content.text.lower()
+            for msg in chain.messages
+            if msg.role == "assistant"
+        )
+        
+        # Verify arguments match between prompts
+        chain_args = {arg.name for arg in chain.arguments}
+        converter_args = {arg.name for arg in converter.arguments}
+        interpreter_args = {arg.name for arg in interpreter.arguments}
+        
+        assert "question" in chain_args
+        assert "question" in converter_args
         assert all(
-            arg.name in {"question", "prolog_code", "results"}
-            for arg in interpreter.arguments
+            arg in interpreter_args
+            for arg in ["question", "prolog_code", "results"]
         )
 
     @pytest.mark.asyncio
@@ -183,11 +191,10 @@ class TestIntegration:
         # Check that we get a meaningful interpretation
         final_msg = messages[-1]
         assert final_msg.role == "assistant"
-        assert "mortal" in final_msg.content.text.lower()
+        assert "yes" in final_msg.content.text.lower()
 
 
 @pytest.fixture
-def mock_session():
-    """Create a mock MCP session for testing."""
-    # Implementation would depend on your testing needs
-    pass
+async def mock_session():
+    """Provide a mock MCP session for testing."""
+    return MockMCPSession()
