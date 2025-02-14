@@ -149,48 +149,36 @@ class MockMCPSession:
         })
         
         # Build the chain response
-        messages = [
-            # Original question
-            types.PromptMessage(
-                role="user",
-                content=types.TextContent(
-                    type="text",
-                    text=question
-                )
-            ),
-            # Conversion
-            types.PromptMessage(
-                role="assistant",
-                content=types.TextContent(
-                    type="text",
-                    text=f"I'll convert this to Prolog:\n\n{prolog_code}"
-                )
-            ),
-            # Execution result
-            types.PromptMessage(
-                role="function",
-                function={
-                    "name": "consult",
-                    "arguments": {"code": prolog_code}
-                }
-            ),
-            # Final interpretation
-            interpretation.messages[0]
-        ]
-        
-        # Add function response
-        if execution["success"]:
-            messages.append(
+        return MockPromptResult(
+            messages=[
+                # Original question
                 types.PromptMessage(
-                    role="function",
+                    role="user",
                     content=types.TextContent(
                         type="text",
-                        text=str(execution)
+                        text=question
                     )
-                )
-            )
-        
-        return MockPromptResult(messages=messages)
+                ),
+                # Conversion
+                types.PromptMessage(
+                    role="assistant",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"I'll convert this to Prolog:\n\n{prolog_code}"
+                    )
+                ),
+                # Execution result as assistant message
+                types.PromptMessage(
+                    role="assistant",
+                    content=types.TextContent(
+                        type="text",
+                        text=f"Let me execute this Prolog code:\n{str(execution)}"
+                    )
+                ),
+                # Final interpretation
+                interpretation.messages[0]
+            ]
+        )
     
     async def _mock_interpret_results(self, arguments: Dict[str, Any]) -> MockPromptResult:
         """Mock the results interpretation prompt."""

@@ -1,7 +1,7 @@
 """Integration tests for Prolog chains using mock session."""
 
 import pytest
-from .test_mcp_mock import MockMCPSession
+from tests.tools.pl.test_mcp_mock import mock_session  # Updated import path
 
 
 @pytest.mark.asyncio
@@ -32,9 +32,9 @@ class TestPrologChainIntegration:
         assert "human(socrates)" in prolog_code
         assert "mortal(X) :- human(X)" in prolog_code
         
-        # Check execution
-        assert messages[2].role == "function"
-        assert messages[2].function["name"] == "consult"
+        # Check execution result
+        assert messages[2].role == "assistant"
+        assert "success" in messages[2].content.text.lower()
         
         # Check interpretation
         assert messages[-1].role == "assistant"
@@ -59,9 +59,10 @@ class TestPrologChainIntegration:
         
         # Verify execution and result
         assert any(
-            msg.role == "function" and msg.function["name"] == "consult"
+            msg.role == "assistant" and "success" in msg.content.text.lower()
             for msg in messages
         )
+        assert messages[-1].role == "assistant"
         assert "yes" in messages[-1].content.text.lower()
 
     async def test_independent_tools(self, mock_session):
