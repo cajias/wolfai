@@ -10,7 +10,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from langchain_mcp_tools import convert_mcp_to_langchain_tools, McpServerCleanupFn
+from langchain_mcp_tools import convert_mcp_to_langchain_tools
 
 
 class PrologAgent:
@@ -24,15 +24,17 @@ class PrologAgent:
 
     async def initialize(self):
         """Initialize the MCP session."""
-        print("Initializing MCP session...")
         await self.session.initialize()
-        print("MCP session initialized.")
+
         # Make sure Prolog tool is available
         tools = await self.session.list_tools()
         tools_map = {tool.name: tool for tool in tools}
         if "consult" not in tools_map:
             raise ValueError("Prolog tool 'consult' not found in available tools")
-        self.model.bind_tools(tools_map)
+
+        # Convert MCP tools to LangChain format
+        self.tools = convert_mcp_to_langchain_tools(tools)
+        self.model.bind_tools(self.tools)
 
     async def __call__(
         self,
@@ -45,52 +47,66 @@ class PrologAgent:
         if not isinstance(last_message, HumanMessage):
             return AIMessage(content="Expected a question from a human.")
 
-        question = last_message.content
-        response = await self.model.ainvoke(question)
-        print(response)
+        # Prepare system message with instructions
+        system_message = """You are an expert in Prolog programming. When given a question, you:
+1. Convert it to Prolog facts and rules
+2. Use the 'consult' tool to load the Prolog code
+3. Use the 'query' tool to ask questions
+4. Return both the Prolog code and the query results
+
+For example, if asked "Is Socrates mortal?", you would:
+1. Write Prolog code:
+   human(socrates).
+   mortal(X) :- human(X).
+2. Load it with consult
+3. Query with: mortal(socrates).
+4. Return the results
+
+Always show your work by including the Prolog code you wrote."""
+
+        # Add system message to model
+        self.model.system_message = system_message
+        
+        # Get response from model with tools
+        response = await self.model.ainvoke(last_message.content)
         return AIMessage(content=response.content)
 
 
-async def create_prolog_agent(model, prolog_server_params: StdioServerParameters):
+async def create_prolog_agent(model: BaseChatModel, prolog_server_params: StdioServerParameters) -> PrologAgent:
     """Create a new Prolog agent with the given language model and server parameters."""
-    print("Creating Prolog agent")
     async with stdio_client(prolog_server_params) as (read, write):
-        print("Creating Session")
         async with ClientSession(read, write) as session:
-            print("Prolog agent session created")
             agent = PrologAgent(model, session)
-            print("Prolog agent created")
             await agent.initialize()
             return agent
+
+
+async def main():
+    """Run an example Prolog agent session."""
+    # Set up server parameters for the Prolog MCP server
+    server_params = StdioServerParameters(
+        command="python",
+        args=["-m", "wolfai.tools.pl.prolog_mcp_server"],
+        env=None
+    )
+
+    # Create language model
+    from langchain_openai import ChatOpenAI
+    model = ChatOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+    # Create and initialize agent
+    agent = await create_prolog_agent(model, server_params)
+
+    # Example usage
+    messages = [HumanMessage(content="If all humans are mortal and Socrates is human, is Socrates mortal?")]
+    response = await agent(messages, config={"debug": True})
+    print(response.content)
 
 
 # Example usage
 if __name__ == "__main__":
     import asyncio
-    from langchain_openai import ChatOpenAI
     from dotenv import load_dotenv
 
     load_dotenv()
-
-
-    async def main():
-        # Set up server parameters for the Prolog MCP server
-        server_params = StdioServerParameters(
-            command="python",
-            args=["-m", "wolfai.tools.pl.prolog_mcp_server"],
-            env=None
-        )
-
-        # Create language model
-        model = ChatOpenAI(api_key=os.environ.get("OPEN_AI_API_KEY"))
-
-        # Create and initialize agent
-        agent = await create_prolog_agent(model, server_params)
-
-        # Example usage
-        messages = [HumanMessage(content="If all humans are mortal and Socrates is human, is Socrates mortal?")]
-        response = await agent(messages, config={"debug": True})
-        print(response.content)
-
-
     asyncio.run(main())
