@@ -1,7 +1,9 @@
-from typing import List, Type
-from pydantic import create_model
-from langchain.tools import Tool
+import logging
+from typing import Type, Dict, Any
+
+from langchain_core.tools import StructuredTool
 from mcp import ClientSession
+from pydantic import BaseModel, create_model
 
 
 def schema_to_pydantic(name: str, schema: dict) -> Type:
@@ -29,28 +31,51 @@ def schema_to_pydantic(name: str, schema: dict) -> Type:
 
     return create_model(name, **fields)
 
+class RunQueryInput(BaseModel):
+    """Schema for run_query tool input."""
+    prolog: str
+    query: str
+    namespace: str
 
-async def get_mcp_tools_as_langchain(session: ClientSession) -> List[Tool]:
-    """Fetch MCP tools and convert them to LangChain tools with correct input schemas."""
+class ConsultInput(BaseModel):
+    """Schema for consult tool input."""
+    code: str
+    session_id: str = None
+
+class ParsePrologInput(BaseModel):
+    """Schema for parse_prolog_code tool input."""
+    code: str
+    session_id: str = None
+
+
+async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredTool]:
+    """Fetch MCP tools and convert them to LangChain StructuredTools."""
     tools = await session.list_tools()
-    langchain_tools = []
 
-    for tool in tools.tools:
-        if not tool.inputSchema:
-            continue  # Skip tools without an input schema
+    schema_map = {
+        "run_query": RunQueryInput,
+        "consult": ConsultInput,
+        "parse_prolog_code": ParsePrologInput,
+    }
 
-        pydantic_model = schema_to_pydantic(tool.name, tool.inputSchema)
+    def create_tool(tool):
+        # If there's no schema for this tool, skip it
+        if tool.name not in schema_map:
+            logging.error(f"Skipping tool {tool.name}: missing schema definition.")
+            return None
 
-        async def async_func(args, tool_name=tool.name):
-            return await session.call_tool(tool_name, args)
+        # Use **kwargs so the function accepts any named args (e.g. prolog=..., query=...)
+        async def tool_function(**kwargs: Dict[str, Any]):
+            # The kwargs dict will contain 'prolog', 'query', etc.
+            # Pass these arguments on to your MCP tool call
+            return await session.call_tool(tool.name, kwargs)
 
-        langchain_tool = Tool(
+        return StructuredTool(
             name=tool.name,
-            func=async_func,  # ✅ Async function instead of lambda
-            description=tool.description,
-            args_schema=pydantic_model  # ✅ Explicitly define args_schema
+            description=tool.description or f"{tool.name} tool",
+            func=tool_function,
+            args_schema=schema_map[tool.name],
         )
 
-        langchain_tools.append(langchain_tool)
-
-    return langchain_tools
+    structured_tools = [create_tool(tool) for tool in tools.tools]
+    return [t for t in structured_tools if t is not None]

@@ -12,6 +12,7 @@ from langchain_core.runnables import RunnableConfig
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+from wolfai.agents.utils import invoke_agent_with_retry
 from wolfai.tools.langchain_utils import get_mcp_tools_as_langchain
 
 # Set up logging with more detail
@@ -116,11 +117,11 @@ class PrologAgent:
                     logger.debug(f"Successfully retrieved {len(langchain_mcp_tools)} tools")
 
                     logger.debug("Initializing LangChain agent executor")
-                    self.agent_executor = initialize_agent(
-                        tools=langchain_mcp_tools,  # Tools integrated from the Prolog server
+                    self.agent_executor =  initialize_agent(
+                        tools=langchain_mcp_tools,  # ✅ Now using StructuredTool
                         llm=self.model,
-                        agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,  # Zero-shot reasoning
-                        verbose=True  # Provides detailed logs about tool selection
+                        agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+                        verbose=True
                     )
                     logger.debug("Agent executor initialized successfully")
         except Exception as e:
@@ -187,7 +188,7 @@ class PrologAgent:
             # Get response from model with tools
             logger.debug("Invoking model with processed message")
             try:
-                response = await self.agent_executor.arun(last_message.content)
+                response = await invoke_agent_with_retry(self.agent_executor, last_message.content)
                 logger.debug("Response from model successfully received")
                 return AIMessage(content=response.content)
             except asyncio.TimeoutError:

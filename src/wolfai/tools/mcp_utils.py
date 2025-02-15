@@ -61,62 +61,32 @@ def generate_example_value(annotation: Any) -> Any:
 
 def get_type_validation_rules(annotation: Any) -> Dict[str, Any]:
     """Extract validation rules from type hints."""
-    rules = {}
 
-    # Handle basic types
-    if annotation == int:
-        rules.update({
-            "type": "number",
-            "format": "integer"
-        })
-    elif annotation == float:
-        rules.update({
-            "type": "number"
-        })
-    elif annotation == str:
-        rules.update({
-            "type": "string"
-        })
-    elif annotation == bool:
-        rules.update({
-            "type": "boolean"
-        })
-    elif annotation == datetime:
-        rules.update({
-            "type": "string",
-            "format": "date-time",
-            "pattern": "^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$"
-        })
-    elif annotation == date:
-        rules.update({
-            "type": "string",
-            "format": "date",
-            "pattern": "^\d{4}-\d{2}-\d{2}$"
-        })
+    # Mapping of basic types to JSON schema
+    type_mapping = {
+        int: {"type": "number", "format": "integer"},
+        float: {"type": "number"},
+        str: {"type": "string"},
+        bool: {"type": "boolean"},
+        datetime: {"type": "string", "format": "date-time", "pattern": r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$"},
+        date: {"type": "string", "format": "date", "pattern": r"^\d{4}-\d{2}-\d{2}$"},
+    }
+
+    # Return basic type schema if available
+    if annotation in type_mapping:
+        return type_mapping[annotation]
 
     # Handle List types
     if get_origin(annotation) is list:
-        rules.update({
-            "type": "array",
-            "items": {"type": "string"}  # Default
-        })
-        if get_args(annotation):
-            inner_type = get_args(annotation)[0]
-            rules["items"] = get_type_validation_rules(inner_type)
+        inner_type = get_args(annotation)[0] if get_args(annotation) else str
+        return {"type": "array", "items": get_type_validation_rules(inner_type)}
 
-    # Handle Dict types
+    # Handle Dict types (only string keys)
     if get_origin(annotation) is dict:
-        rules.update({
-            "type": "object"
-        })
-        args = get_args(annotation)
-        if len(args) == 2:
-            key_type, value_type = args
-            if key_type == str:  # Only handle string keys for now
-                rules["additionalProperties"] = get_type_validation_rules(value_type)
+        value_type = get_args(annotation)[1] if len(get_args(annotation)) == 2 else Any
+        return {"type": "object", "additionalProperties": get_type_validation_rules(value_type)}
 
-    return rules
-
+    return {}  # Return empty schema if type is unknown
 
 def get_parameter_schema(
     param: inspect.Parameter,
@@ -357,45 +327,19 @@ def is_mp_prompt_type(obj):
 
 
 def generate_tools_from_module(
-    module: Any,
-    include_private: bool = False,
-    exclude: Optional[List[str]] = None
+    module: Any, include_private: bool = False, exclude: Optional[List[str]] = None
 ) -> List[types.Tool]:
-    """
-    Generate MCP tools from all suitable functions in a module.
+    """Generate MCP tools from all suitable functions in a module."""
+    exclude = set(exclude or [])
 
-    Args:
-        module: The module to inspect
-        include_private: Whether to include private functions (starting with _)
-        exclude: List of function names to exclude
-
-    Returns:
-        List of MCP Tool objects
-    """
-    exclude = exclude or []
-    tools = []
-
-    for name, obj in inspect.getmembers(module):
-        # Skip if in exclude list
-        if name in exclude:
-            continue
-
-        # Skip private functions unless explicitly included
-        if not include_private and name.startswith('_'):
-            continue
-
-        # Skip non-functions
-        if not inspect.isfunction(obj):
-            continue
-
-        if is_mp_prompt_type(obj):
-            continue
-
-        tool = function_to_mcp_tool(obj, name)
-        tools.append(tool)
-
-    return tools
-
+    return [
+        function_to_mcp_tool(obj, name)
+        for name, obj in inspect.getmembers(module, inspect.isfunction)
+        if name not in exclude
+        and (include_private or not name.startswith("_"))
+        and not hasattr(obj, "__wrapped__")
+        and not is_mp_prompt_type(obj)
+    ]
 
 def generate_from_module(
     module: Any,
