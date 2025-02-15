@@ -62,7 +62,7 @@ class PrologResult:
 
 
 @contextlib.contextmanager
-def temporary_prolog_env():
+def _temporary_prolog_env():
     """
     Create an isolated Prolog environment for safe query execution.
 
@@ -97,7 +97,7 @@ def temporary_prolog_env():
         prolog = None
 
 
-def namespace_predicate(pred: str, namespace: str) -> str:
+def _namespace_predicate(pred: str, namespace: str) -> str:
     """
     Add namespace prefix to a predicate to prevent naming conflicts.
 
@@ -113,21 +113,21 @@ def namespace_predicate(pred: str, namespace: str) -> str:
         The predicate with namespace prefix added
 
     Examples:
-        >>> namespace_predicate("person(john)", "ns1")
+        >>> _namespace_predicate("person(john)", "ns1")
         "ns1_person(john)"
-        >>> namespace_predicate("parent(X, Y) :- person(X), person(Y)", "ns1")
+        >>> _namespace_predicate("parent(X, Y) :- person(X), person(Y)", "ns1")
         "ns1_parent(X, Y) :- ns1_person(X), ns1_person(Y)"
     """
     if ':-' in pred:
         # For rules, we need to namespace both head and body
         head, body = pred.split(':-', 1)
-        head = namespace_predicate(head.strip(), namespace)
+        head = _namespace_predicate(head.strip(), namespace)
         # Namespace each predicate in the body, but not built-ins
         body_parts = []
         for part in body.split(','):
             part = part.strip()
             if '(' in part:  # Only namespace predicates, not built-ins
-                body_parts.append(namespace_predicate(part, namespace))
+                body_parts.append(_namespace_predicate(part, namespace))
             else:
                 body_parts.append(part)
         return f"{head} :- {', '.join(body_parts)}"
@@ -180,7 +180,7 @@ def parse_prolog_code(code: str) -> List[str]:
     return lines
 
 
-def load_facts(prolog: Prolog, facts: List[str], namespace: str) -> Optional[str]:
+def _load_facts(prolog: Prolog, facts: List[str], namespace: str) -> Optional[str]:
     """
     Load facts and rules into a Prolog environment with proper namespacing.
 
@@ -249,7 +249,7 @@ def load_facts(prolog: Prolog, facts: List[str], namespace: str) -> Optional[str
             if fact.endswith('.'):
                 fact = fact[:-1]
 
-            fact = namespace_predicate(fact, namespace)
+            fact = _namespace_predicate(fact, namespace)
             list(prolog.query(f"asserta(({fact}))"))
 
         return None
@@ -287,7 +287,7 @@ def run_query(prolog: Prolog, query: str, namespace: str) -> PrologResult:
 
     try:
         # Add namespace prefix to query predicates
-        query = namespace_predicate(query, namespace)
+        query = _namespace_predicate(query, namespace)
 
         # Collect and format solutions
         solutions = []
@@ -340,7 +340,7 @@ def consult(code: str) -> PrologState:
     return PrologState(facts=facts)
 
 
-def execute(state: PrologState, query: str) -> Tuple[PrologResult, PrologState]:
+def _execute(state: PrologState, query: str) -> Tuple[PrologResult, PrologState]:
     """
     Execute a query against a program state with proper isolation.
 
@@ -363,14 +363,14 @@ def execute(state: PrologState, query: str) -> Tuple[PrologResult, PrologState]:
         - New PrologState with updated query history
 
     Example:
-        >>> result, new_state = execute(state, "parent(X, Y)")
+        >>> result, new_state = _execute(state, "parent(X, Y)")
         >>> if result.success:
         ...     for solution in result.solutions:
         ...         print(f"X = {solution['X']}, Y = {solution['Y']}")
     """
-    with temporary_prolog_env() as (prolog, namespace):
+    with _temporary_prolog_env() as (prolog, namespace):
         # Load facts with proper namespacing
-        error = load_facts(prolog, state.facts, namespace)
+        error = _load_facts(prolog, state.facts, namespace)
         if error:
             result = PrologResult(
                 success=False,

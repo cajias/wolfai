@@ -7,7 +7,7 @@ import anyio
 import mcp.types as types
 from mcp.server.lowlevel import Server
 
-from ..tools.mcp_utils import generate_tools_from_module
+from wolfai.tools.mcp_utils import generate_tools_from_module
 
 
 class ModuleServer:
@@ -100,7 +100,6 @@ class ModuleServer:
 
         return app
 
-
 def run_server(
     module: Any,
     name: str = None,
@@ -124,7 +123,17 @@ def run_server(
     server = ModuleServer(module, name, session_store)
     app = server.create_server()
 
-    if transport == "sse":
+    if transport == "stdio":
+        from mcp.server.stdio import stdio_server
+
+        async def arun():
+            async with stdio_server() as streams:
+                await app.run(
+                    streams[0], streams[1], app.create_initialization_options()
+                )
+
+        anyio.run(arun)
+    else:
         from mcp.server.sse import SseServerTransport
         from starlette.applications import Starlette
         from starlette.routing import Mount, Route
@@ -149,13 +158,4 @@ def run_server(
 
         import uvicorn
         uvicorn.run(starlette_app, host="0.0.0.0", port=port)
-    else:
-        from mcp.server.stdio import stdio_server
 
-        async def arun():
-            async with stdio_server() as streams:
-                await app.run(
-                    streams[0], streams[1], app.create_initialization_options()
-                )
-
-        anyio.run(arun)

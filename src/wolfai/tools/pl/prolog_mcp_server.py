@@ -1,19 +1,9 @@
 """MCP server for the Prolog module with integrated prompts."""
-import logging
-import sys
 
 import click
 
-from wolfai.tools.mcp_server_factory import run_server
-from wolfai.tools.pl import prolog
-
-# Set up logging with more detail
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stdout
-)
-logger = logging.getLogger(__name__)
+from wolfai.tools import mcp_server_factory
+from . import prolog
 
 
 def main():
@@ -27,8 +17,7 @@ def main():
         help="Transport type",
     )
     def cli(port: int, transport: str):
-        logger.info(f"CLI starting with transport={transport}, port={port}")
-        run_server(module=prolog, port=port, transport=transport)
+        mcp_server_factory.run_server(module=prolog, port=port, transport=transport)
 
     cli()
 

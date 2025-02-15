@@ -239,7 +239,7 @@ def function_to_mcp_tool(func: Callable, name: Optional[str] = None) -> types.To
     if doc.examples:
         descriptions.append("Examples:")
         for example in doc.examples:
-            descriptions.append(example)
+            descriptions.append(example.description)
 
     # Create MCP tool
     tool_name = name or func.__name__
@@ -391,11 +391,8 @@ def generate_tools_from_module(
         if is_mp_prompt_type(obj):
             continue
 
-        try:
-            tool = function_to_mcp_tool(obj, name)
-            tools.append(tool)
-        except Exception as e:
-            print(f"Warning: Could not convert {name} to tool: {e}")
+        tool = function_to_mcp_tool(obj, name)
+        tools.append(tool)
 
     return tools
 

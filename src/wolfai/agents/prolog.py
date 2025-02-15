@@ -1,17 +1,18 @@
 """LangGraph agent for Prolog reasoning."""
-import os
+import asyncio
 import logging
 import sys
-import asyncio
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 
+from langchain.agents import initialize_agent, AgentType
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from langchain_mcp_tools import convert_mcp_to_langchain_tools
+
+from wolfai.tools.langchain_utils import get_mcp_tools_as_langchain
 
 # Set up logging with more detail
 logging.basicConfig(
@@ -23,44 +24,107 @@ logger = logging.getLogger(__name__)
 
 
 class PrologAgent:
-    """Agent that converts natural language to Prolog and executes it."""
+    """Agent that converts natural language to Prolog and executes it.
 
-    def __init__(self, model: BaseChatModel, session: ClientSession):
-        """Initialize with a language model for NL->Prolog conversion."""
+    This agent integrates a language model and a Prolog reasoning engine. It converts natural
+    language into Prolog logic and executes those logical statements through a Prolog server.
+    Key features involve dynamic tool usage and zero-shot reasoning capabilities, enabled by
+    LangChain's agent framework.
+
+    Features:
+    - Converts natural language into logical Prolog statements.
+    - Executes the Prolog logic via the stdio protocol.
+    - Dynamically retrieves and integrates tools for solving complex queries.
+    - Applies advanced reasoning by leveraging the capabilities of LangChain's agent framework.
+
+    Attributes:
+        model (BaseChatModel): Language model performing natural language to Prolog conversion.
+        prolog_server_params (StdioServerParameters): Configuration parameters for Prolog server connection.
+        agent_executor (Optional): LangChain's agent executor for processing queries with Prolog tools.
+    """
+
+    def __init__(self, model: BaseChatModel, prolog_server_params: StdioServerParameters):
+        """
+        Initialize the Prolog Agent.
+
+        This constructor sets up the agent by attaching the provided language model and
+        server parameters to the internal attributes. The `agent_executor` remains uninitialized
+        until the `initialize()` method is invoked.
+
+        Args:
+            model (BaseChatModel): Language model used to parse natural language into logical Prolog statements.
+            prolog_server_params (StdioServerParameters): Parameters used to configure and establish a Prolog connection.
+
+        Example:
+            ```
+            from langchain_core.language_models import SomeBaseChatModel
+            model = SomeBaseChatModel(...)
+            params = StdioServerParameters(client="path/to/prolog", ...)
+            agent = PrologAgent(model, params)
+            ```
+        """
         self.model = model
-        self.session = session
-        self.tools = None
-        logger.debug("PrologAgent initialized with model and session")
+        self.prolog_server_params = prolog_server_params
+        self.agent_executor = None
 
     async def initialize(self):
-        """Initialize the MCP session."""
+        """
+        Initialize communication with the Prolog server and setup tools.
+
+        This method performs the critical task of connecting to the Prolog server, initializing
+        its session, and integrating Prolog-compatible tools into the LangChain framework.
+        It creates the `agent_executor` using the retrieved tools and binds it to the language model for
+        dynamic query resolution.
+
+        Detailed Workflow:
+        1. Establishes a client session for Prolog communication through stdio.
+        2. Dynamically retrieves Prolog tools as LangChain-compatible tools.
+        3. Instantiates LangChain's agent executor in "zero-shot reasoning" mode.
+
+        Key Functionalities:
+        - Enables tool-based dynamic reasoning via LangChain.
+        - Validates server responses, ensuring readiness for the Prolog engine.
+
+        Raises:
+            Exception: Any error during initialization is logged and re-raised to interrupt execution. Common errors include:
+              - Failure to connect to the Prolog server.
+              - Issues during tool fetching or integration.
+              - Internal server errors.
+
+        Logs:
+            - Debug logs during every major checkpoint to trace progress and debugging.
+            - Errors are logged alongside stack traces for detailed issue diagnosis.
+
+        Example:
+            ```
+            agent = PrologAgent(model, prolog_server_params)
+            await agent.initialize()  # Must be called before querying the agent
+            ```
+
+        Returns:
+            None
+        """
         try:
-            logger.debug("Starting MCP session initialization")
-            await asyncio.wait_for(self.session.initialize(), timeout=10.0)
-            logger.debug("Session initialized successfully")
+            logger.debug("Creating stdio client for Prolog communication")
+            async with stdio_client(self.prolog_server_params) as (read, write):
+                logger.debug("Stdio client created successfully, initializing session")
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    logger.debug("Session initialized successfully, retrieving tools")
 
-            # List tools with timeout
-            logger.debug("Listing available tools")
-            tools = await asyncio.wait_for(self.session.list_tools(), timeout=5.0)
-            tools_map = {tool.name: tool for tool in tools}
-            logger.debug(f"Available tools: {list(tools_map.keys())}")
-            
-            if "consult" not in tools_map:
-                logger.error("Required 'consult' tool not found")
-                raise ValueError("Prolog tool 'consult' not found in available tools")
+                    langchain_mcp_tools = await get_mcp_tools_as_langchain(session)
+                    logger.debug(f"Successfully retrieved {len(langchain_mcp_tools)} tools")
 
-            # Convert and bind tools
-            logger.debug("Converting tools to LangChain format")
-            self.tools = convert_mcp_to_langchain_tools(tools)
-            logger.debug("Binding tools to model")
-            self.model.bind_tools(self.tools)
-            logger.info("Agent initialization completed successfully")
-            
-        except asyncio.TimeoutError as e:
-            logger.error("Timeout during initialization", exc_info=True)
-            raise Exception("Initialization timed out") from e
+                    logger.debug("Initializing LangChain agent executor")
+                    self.agent_executor = initialize_agent(
+                        tools=langchain_mcp_tools,  # Tools integrated from the Prolog server
+                        llm=self.model,
+                        agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,  # Zero-shot reasoning
+                        verbose=True  # Provides detailed logs about tool selection
+                    )
+                    logger.debug("Agent executor initialized successfully")
         except Exception as e:
-            logger.error(f"Error during initialization: {str(e)}", exc_info=True)
+            logger.error(f"Error during Prolog agent initialization: {str(e)}", exc_info=True)
             raise
 
     async def __call__(
@@ -68,167 +132,68 @@ class PrologAgent:
         messages: List[BaseMessage],
         config: Optional[RunnableConfig] = None,
     ) -> AIMessage:
-        """Process messages and return a response."""
+        """
+        Process a sequence of messages and generate a Prolog reasoning-powered AI response.
+
+        This method interprets incoming human-like messages, uses the `agent_executor` for
+        reasoning, and generates a response based on the Prolog server tools and logic.
+
+        Args:
+            messages (List[BaseMessage]): Sequence of messages in the conversation.
+                - The most recent message must be a `HumanMessage` containing the query.
+                - Supports full conversational context but focuses on the last query.
+            config (Optional[RunnableConfig]): Configuration details affecting response generation.
+
+        Returns:
+            AIMessage: The agent's response, containing reasoning or retrieval results.
+
+        Workflow:
+        1. Validates `agent_executor` initialization. If uninitialized, a `RuntimeError` is raised.
+        2. Verifies if the last message is from a human. If not, returns a default clarification response.
+        3. Processes the human query, invokes the `agent_executor` to compute a solution, and returns it.
+        4. Handles timeouts and errors to ensure graceful degradation with explanatory responses.
+
+        Raises:
+            RuntimeError: Raised if called before invoking `initialize()`.
+            Exception: Captures unexpected issues during runtime. Logs errors with stack traces.
+
+        Logs:
+            - Debug logs to trace message processing and logic execution results.
+            - Warnings for unexpected message types and errors for unexpected system issues.
+
+        Error Handling:
+        - On timeout, it informs the user and guides a retry.
+        - On general errors, returns a polite error message with no stack trace leakage.
+
+        Example:
+            ```
+            messages = [HumanMessage(content="What is the capital of France?")]
+            response = await agent(messages)
+            print(response.content)  # Will print the computed or retrieved answer
+            ```
+        """
+        if self.agent_executor is None:
+            raise RuntimeError("Agent not initialized")
+
         try:
             # Extract the last question
             last_message = messages[-1]
             if not isinstance(last_message, HumanMessage):
-                logger.warning("Received non-human message")
+                logger.warning("Received non-human message, returning a default response")
                 return AIMessage(content="Expected a question from a human.")
 
-            logger.debug(f"Processing message: {last_message.content[:100]}...")
+            logger.debug(f"Processing last message: {last_message.content[:100]}...")
 
-            # Prepare system message with instructions
-            system_message = """You are an expert in Prolog programming. When given a question, you:
-1. Convert it to Prolog facts and rules
-2. Use the 'consult' tool to load the Prolog code
-3. Use the 'query' tool to ask questions
-4. Return both the Prolog code and the query results
-
-For example, if asked "Is Socrates mortal?", you would:
-1. Write Prolog code:
-   human(socrates).
-   mortal(X) :- human(X).
-2. Load it with consult
-3. Query with: mortal(socrates).
-4. Return the results
-
-Always show your work by including the Prolog code you wrote."""
-
-            # Add system message to model
-            logger.debug("Setting system message")
-            self.model.system_message = system_message
-            
             # Get response from model with tools
-            logger.debug("Invoking model with message")
+            logger.debug("Invoking model with processed message")
             try:
-                response = await asyncio.wait_for(
-                    self.model.ainvoke(last_message.content),
-                    timeout=30.0
-                )
-                logger.debug("Model response received successfully")
+                response = await self.agent_executor.arun(last_message.content)
+                logger.debug("Response from model successfully received")
                 return AIMessage(content=response.content)
             except asyncio.TimeoutError:
-                logger.error("Model invocation timed out")
+                logger.error("Timeout occurred during model response generation")
                 return AIMessage(content="I apologize, but the operation timed out. Please try again.")
-                
+
         except Exception as e:
-            logger.error(f"Error in agent call: {str(e)}", exc_info=True)
+            logger.error(f"Unexpected error in agent call: {str(e)}", exc_info=True)
             return AIMessage(content=f"I encountered an error: {str(e)}")
-
-
-async def create_prolog_agent(model: BaseChatModel, prolog_server_params: StdioServerParameters) -> PrologAgent:
-    """Create a new Prolog agent with the given language model and server parameters."""
-    logger.info("Creating Prolog agent")
-    try:
-        logger.debug("Creating stdio client")
-        async with stdio_client(prolog_server_params) as (read, write):
-            logger.debug("Creating MCP session")
-            async with ClientSession(read, write) as session:
-                logger.debug("Initializing PrologAgent")
-                agent = PrologAgent(model, session)
-                try:
-                    logger.debug("Starting agent initialization")
-                    await asyncio.wait_for(agent.initialize(), timeout=10.0)
-                    logger.info("Prolog agent created successfully")
-                    return agent
-                except asyncio.TimeoutError:
-                    logger.error("Agent initialization timed out")
-                    raise Exception("Prolog agent initialization timed out")
-                except Exception as e:
-                    logger.error(f"Error initializing agent: {str(e)}", exc_info=True)
-                    raise
-    except Exception as e:
-        logger.error(f"Error creating Prolog agent: {str(e)}", exc_info=True)
-        raise
-
-
-async def run_example():
-    """Run an example Prolog agent session with error handling."""
-    try:
-        logger.info("Starting example Prolog agent session")
-        
-        # Set up server parameters
-        server_params = StdioServerParameters(
-            command="python",
-            args=["-m", "wolfai.tools.pl.prolog_mcp_server"],
-            env=None
-        )
-
-        # Create language model
-        from langchain_openai import ChatOpenAI
-        logger.debug("Creating ChatOpenAI instance")
-        model = ChatOpenAI(
-            api_key=os.environ.get("OPENAI_API_KEY"),
-            timeout=30.0
-        )
-
-        # Create and initialize agent
-        logger.debug("Creating Prolog agent")
-        try:
-            agent = await asyncio.wait_for(
-                create_prolog_agent(model, server_params),
-                timeout=15.0
-            )
-        except asyncio.TimeoutError:
-            logger.error("Agent creation timed out")
-            print("Agent creation timed out. Please check the server status and try again.")
-            return
-        except Exception as e:
-            logger.error(f"Failed to create agent: {str(e)}", exc_info=True)
-            print(f"Failed to create agent: {str(e)}")
-            return
-
-        # Example usage
-        logger.debug("Running example query")
-        messages = [HumanMessage(content="If all humans are mortal and Socrates is human, is Socrates mortal?")]
-        
-        try:
-            response = await asyncio.wait_for(
-                agent(messages, config={"debug": True}),
-                timeout=30.0
-            )
-            print(response.content)
-        except asyncio.TimeoutError:
-            logger.error("Query execution timed out")
-            print("The query timed out. Please try again.")
-        except Exception as e:
-            logger.error(f"Error during query execution: {str(e)}", exc_info=True)
-            print(f"Error during query execution: {str(e)}")
-        
-    except Exception as e:
-        logger.error(f"Unexpected error in example run: {str(e)}", exc_info=True)
-        print(f"An unexpected error occurred: {str(e)}")
-
-
-async def main():
-    """Main entry point with proper signal handling."""
-    try:
-        # Set up signal handlers
-        loop = asyncio.get_running_loop()
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            loop.add_signal_handler(sig, lambda: asyncio.create_task(cleanup()))
-            
-        await run_example()
-    except Exception as e:
-        logger.error(f"Error in main: {str(e)}", exc_info=True)
-        sys.exit(1)
-
-
-async def cleanup():
-    """Cleanup function for graceful shutdown."""
-    logger.info("Starting cleanup")
-    try:
-        # Add any cleanup code here
-        sys.exit(0)
-    except Exception as e:
-        logger.error(f"Error during cleanup: {str(e)}", exc_info=True)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    import signal
-    from dotenv import load_dotenv
-
-    load_dotenv()
-    asyncio.run(main())

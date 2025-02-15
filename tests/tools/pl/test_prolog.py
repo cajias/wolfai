@@ -1,7 +1,7 @@
 """Tests for the functional Prolog execution engine."""
 
 from wolfai.tools.pl.prolog import (
-    consult, execute, parse_prolog_code
+    consult, _execute, parse_prolog_code
 )
 
 def test_parse_prolog_code():
@@ -50,7 +50,7 @@ def test_execute_simple_query():
     """)
 
     # Execute query
-    result, new_state = execute(state, "person(X)")
+    result, new_state = _execute(state, "person(X)")
 
     # Check result
     assert result.success
@@ -76,7 +76,7 @@ def test_execute_with_rules():
         parent(Z, Y).
     """)
 
-    result, new_state = execute(state, "grandparent(john, Y)")
+    result, new_state = _execute(state, "grandparent(john, Y)")
 
     assert result.success
     assert len(result.solutions) == 1
@@ -90,20 +90,20 @@ def test_execute_error_handling():
     person(x).
     """)
 
-    result, new_state = execute(state, "person(X)")
+    result, new_state = _execute(state, "person(X)")
     assert not result.success
     assert result.error is not None
 
     # Invalid query
     state = consult("person(john).")
-    result, new_state = execute(state, "invalid_query(")
+    result, new_state = _execute(state, "invalid_query(")
     assert not result.success
     assert result.error is not None
 
 def test_empty_query():
     """Test handling of empty queries."""
     state = consult("person(john).")
-    result, new_state = execute(state, "")
+    result, new_state = _execute(state, "")
     assert not result.success
     assert "Empty query" in result.error
 
@@ -111,13 +111,13 @@ def test_state_isolation():
     """Test that state doesn't leak between executions."""
     # First execution
     state1 = consult("person(john).")
-    result1, _ = execute(state1, "person(X)")
+    result1, _ = _execute(state1, "person(X)")
     assert result1.success
     assert len(result1.solutions) == 1
     assert result1.solutions[0]['X'] == 'john'
 
     # Second execution with different facts
     state2 = consult("city(london).")
-    result2, _ = execute(state2, "person(X)")
+    result2, _ = _execute(state2, "person(X)")
     assert result2.success  # Query succeeds but finds no solutions
     assert not result2.solutions  # Should not see facts from state1
