@@ -7,7 +7,7 @@ import anyio
 import mcp.types as types
 from mcp.server.lowlevel import Server
 
-from src.wolfai.tools.mcp_utils import generate_tools_from_module
+from ..tools.mcp_utils import generate_tools_from_module
 
 
 class ModuleServer:
@@ -96,29 +96,9 @@ class ModuleServer:
                     "description": "Session identifier for state management",
                     "default": "default"
                 }
-
             return tools
 
         return app
-
-
-def create_server(
-    module: Any,
-    name: str,
-    session_store: Optional[Dict] = None
-) -> ModuleServer:
-    """
-    Create a new MCP server for a module.
-
-    Args:
-        module: The Python module to expose
-        name: Name for the server
-        session_store: Optional dictionary to use for session storage
-
-    Returns:
-        Configured ModuleServer instance
-    """
-    return ModuleServer(module, name, session_store)
 
 
 def run_server(
@@ -141,7 +121,7 @@ def run_server(
     if name is None:
         name = f"mcp-{module.__name__.split('.')[-1]}"
 
-    server = create_server(module, name, session_store)
+    server = ModuleServer(module, name, session_store)
     app = server.create_server()
 
     if transport == "sse":

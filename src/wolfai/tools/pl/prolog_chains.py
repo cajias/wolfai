@@ -90,7 +90,8 @@ def create_converter_prompt() -> MCPPrompt:
     """Prompt specifically for the NL to Prolog conversion step."""
     return MCPPrompt(
         name="convert-to-prolog",
-        description="Convert natural language to Prolog code",
+        description=""""Convert the following question into a Prolog program.
+        Include any necessary facts and rules, and end with a query that would answer the question.""",
         arguments=[
             types.PromptArgument(
                 name="question",
