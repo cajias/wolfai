@@ -190,7 +190,7 @@ class PrologAgent:
             try:
                 response = await invoke_agent_with_retry(self.agent_executor, last_message.content)
                 logger.debug("Response from model successfully received")
-                return AIMessage(content=response.content)
+                return AIMessage(content=response['output'])
             except asyncio.TimeoutError:
                 logger.error("Timeout occurred during model response generation")
                 return AIMessage(content="I apologize, but the operation timed out. Please try again.")

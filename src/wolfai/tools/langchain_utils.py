@@ -1,8 +1,9 @@
+import asyncio
 import logging
-from typing import Type, Dict, Any
+from typing import Type, Any
 
 from langchain_core.tools import StructuredTool
-from mcp import ClientSession
+from mcp import ClientSession, types as mcp_types
 from pydantic import BaseModel, create_model
 
 
@@ -65,15 +66,63 @@ async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredT
             return None
 
         # Use **kwargs so the function accepts any named args (e.g. prolog=..., query=...)
-        async def tool_function(**kwargs: Dict[str, Any]):
-            # The kwargs dict will contain 'prolog', 'query', etc.
-            # Pass these arguments on to your MCP tool call
-            return await session.call_tool(tool.name, kwargs)
+        async def tool_function_sync(*args: Any, **kwargs: Any) -> mcp_types.CallToolResult:
+            """
+            A synchronous function that:
+              - Accepts unlimited positional args (*args)
+              - Accepts unlimited keyword args (**kwargs)
+              - Merges them into a final dictionary
+              - Uses the tool's schema to decide how to handle the positional args
+              - Calls an async function with asyncio.run()
+
+            Returns:
+              The result of calling the MCP tool with the merged arguments.
+            """
+            schema = tool.inputSchema or {}
+            required_fields = schema.get("required", [])
+            props = schema.get("properties", {})
+
+            # Start with the named (keyword) arguments
+            final_args = {k:v for k, v in kwargs.items()}
+
+            # If the user provided positional arguments, decide how to handle them:
+            if args:
+                # 1) If there's exactly one required field in the schema, store *args under that field
+                if len(required_fields) == 1:
+                    field_name = required_fields[0]
+
+                    # If that field is not in 'props', fallback or just assume it
+                    if field_name not in props:
+                        logging.warning(f"Field '{field_name}' not found in properties. Using anyway.")
+
+                    # If there's exactly one positional argument, store it directly
+                    # If there's multiple, store them as a list, or handle them differently
+                    if len(args) == 1:
+                        final_args[field_name] = args[0]
+                    else:
+                        # If you want to store multiple positional arguments as a list
+                        final_args[field_name] = list(args)
+
+                # 2) If there's a single property but not necessarily 'required'
+                elif len(props) == 1:
+                    (single_prop,) = props.keys()
+                    if len(args) == 1:
+                        final_args[single_prop] = args[0]
+                    else:
+                        final_args[single_prop] = list(args)
+
+                # 3) Otherwise, store them in a fallback 'positional' key
+                else:
+                    # We put all *args in a separate key named e.g. "positional"
+                    final_args["positional"] = list(args)
+
+            result = asyncio.run(session.call_tool(tool.name, final_args)).result()
+            return result
 
         return StructuredTool(
             name=tool.name,
             description=tool.description or f"{tool.name} tool",
-            func=tool_function,
+            func=tool_function_sync,
             args_schema=schema_map[tool.name],
         )
 

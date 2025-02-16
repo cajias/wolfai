@@ -1,7 +1,6 @@
 """Tests for Prolog chain prompts."""
 
 import pytest
-import mcp.types as types
 from src.wolfai.tools.pl.prolog_chains import (
     create_prolog_chain_prompt,
     create_converter_prompt,

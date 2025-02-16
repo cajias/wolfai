@@ -1,7 +1,6 @@
 """Integration tests for Prolog chains using mock session."""
 
 import pytest
-from tests.tools.pl.test_mcp_mock import mock_session  # Updated import path
 
 
 @pytest.mark.asyncio
