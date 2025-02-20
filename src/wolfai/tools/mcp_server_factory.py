@@ -7,7 +7,7 @@ import anyio
 import mcp.types as types
 from mcp.server.lowlevel import Server
 
-from wolfai.tools.mcp_utils import generate_tools_from_module
+from wolfai.tools.mcp_utils import generate_from_module
 
 
 class ModuleServer:
@@ -23,9 +23,18 @@ class ModuleServer:
             session_store: Optional dictionary to use for session storage
         """
         self.module = module
+        tools, self.prompts = generate_from_module(module)
+        self.tools  = []
         self.name = name
         self.session_store = session_store or {}
         self.function_cache = {}  # Cache function lookup
+        for tool in tools:
+            tool.inputSchema["properties"]["session_id"] = {
+                "type": "string",
+                "description": "Session identifier for state management",
+                "default": "default"
+            }
+            self.tools.append(tool)
 
     def _get_function(self, name: str) -> Callable:
         """Get function from module by name."""
@@ -87,16 +96,7 @@ class ModuleServer:
 
         @app.list_tools()
         async def list_tools() -> list[types.Tool]:
-            tools = generate_tools_from_module(self.module)
-
-            # Add session_id parameter to all tools
-            for tool in tools:
-                tool.inputSchema["properties"]["session_id"] = {
-                    "type": "string",
-                    "description": "Session identifier for state management",
-                    "default": "default"
-                }
-            return tools
+            return self.tools
 
         return app
 

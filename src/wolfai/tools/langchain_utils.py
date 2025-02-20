@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Type, Any
+from typing import Type, Any, Dict
 
 from langchain_core.tools import StructuredTool
 from mcp import ClientSession, types as mcp_types
@@ -53,17 +53,7 @@ async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredT
     """Fetch MCP tools and convert them to LangChain StructuredTools."""
     tools = await session.list_tools()
 
-    schema_map = {
-        "run_query": RunQueryInput,
-        "consult": ConsultInput,
-        "parse_prolog_code": ParsePrologInput,
-    }
-
-    def create_tool(tool):
-        # If there's no schema for this tool, skip it
-        if tool.name not in schema_map:
-            logging.error(f"Skipping tool {tool.name}: missing schema definition.")
-            return None
+    def create_tool(tool: mcp_types.Tool):
 
         # Use **kwargs so the function accepts any named args (e.g. prolog=..., query=...)
         async def tool_function_sync(*args: Any, **kwargs: Any) -> mcp_types.CallToolResult:
@@ -119,12 +109,43 @@ async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredT
             result = asyncio.run(session.call_tool(tool.name, final_args)).result()
             return result
 
+        dynamic_tool_schema = create_pydantic_model(f"{tool.name.capitalize()}ToolSchema", dict(tool.inputSchema["properties"]))
         return StructuredTool(
             name=tool.name,
             description=tool.description or f"{tool.name} tool",
             func=tool_function_sync,
-            args_schema=schema_map[tool.name],
+            args_schema =dynamic_tool_schema,
         )
 
     structured_tools = [create_tool(tool) for tool in tools.tools]
     return [t for t in structured_tools if t is not None]
+
+
+JSON_TYPE_MAPPING = {
+    "string": str,
+    "integer": int,
+    "number": float,
+    "boolean": bool,
+    "array": list,
+    "object": dict
+}
+
+
+def create_pydantic_model(name: str, schema: Dict[str, Any]) -> Type[BaseModel]:
+    """Dynamically creates a Pydantic model class from a dictionary schema, supporting multiple types."""
+    fields = {}
+
+    for key, value in schema.items():
+        if value is None:
+            continue  # Skip None values
+
+        # Get type from mapping or fallback to Any
+        field_type = JSON_TYPE_MAPPING.get(value.get("type"), Any)
+
+        # Handle default values if they exist in the schema
+        if "default" in value:
+            fields[key] = (field_type, value["default"])
+        else:
+            fields[key] = (field_type, ...)
+
+    return create_model(name, **fields)

@@ -24,6 +24,8 @@ from typing import Dict, List, Any, Optional, Tuple
 
 from pyswip import Prolog
 
+from wolfai.tools.mcp_utils import tool
+
 
 @dataclass(frozen=True)
 class PrologState:
@@ -140,6 +142,7 @@ def _namespace_predicate(pred: str, namespace: str) -> str:
     return f"{namespace}_{pred_name}{pred_args}"
 
 
+@tool()
 def parse_prolog_code(code: str) -> List[str]:
     """
     Parse raw Prolog code into individual statements.
@@ -257,6 +260,7 @@ def _load_facts(prolog: Prolog, facts: List[str], namespace: str) -> Optional[st
         return str(e)
 
 
+@tool
 def run_query(prolog: Prolog, query: str, namespace: str) -> PrologResult:
     """
     Execute a query in a Prolog environment and collect results.
@@ -313,7 +317,7 @@ def run_query(prolog: Prolog, query: str, namespace: str) -> PrologResult:
             error=f"Error executing query: {error_msg}"
         )
 
-
+@tool
 def consult(code: str) -> PrologState:
     """
     Parse Prolog code and create initial program state.

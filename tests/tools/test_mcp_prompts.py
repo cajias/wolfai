@@ -174,7 +174,9 @@ class TestModulePrompts:
             'prompt_func': prompt_func
         })
 
-        tools, prompts = generate_from_module(module)
+        self.module = generate_from_module(module)
+        self.self_module = self.module
+        tools, prompts = self.self_module
 
         # Check tools
         assert len(tools) == 1
