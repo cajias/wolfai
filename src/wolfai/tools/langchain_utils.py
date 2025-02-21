@@ -6,32 +6,6 @@ from langchain_core.tools import StructuredTool
 from mcp import ClientSession, types as mcp_types
 from pydantic import BaseModel, create_model
 
-
-def schema_to_pydantic(name: str, schema: dict) -> Type:
-    """Convert an MCP tool's inputSchema to a Pydantic model."""
-    fields = {}
-
-    if not schema:  # Ensure schema exists
-        return create_model(name)  # Create an empty schema if none is provided
-
-    for param_name, param_info in schema.get("properties", {}).items():
-        field_type = str  # Default type
-
-        if param_info.get("type") == "integer":
-            field_type = int
-        elif param_info.get("type") == "number":
-            field_type = float
-        elif param_info.get("type") == "boolean":
-            field_type = bool
-
-        # Handle required vs. optional fields
-        if "required" in schema and param_name in schema["required"]:
-            fields[param_name] = (field_type, ...)
-        else:
-            fields[param_name] = (field_type, None)
-
-    return create_model(name, **fields)
-
 class RunQueryInput(BaseModel):
     """Schema for run_query tool input."""
     prolog: str
@@ -71,45 +45,13 @@ async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredT
             schema = tool.inputSchema or {}
             required_fields = schema.get("required", [])
             props = schema.get("properties", {})
-
             # Start with the named (keyword) arguments
-            final_args = {k:v for k, v in kwargs.items()}
-
-            # If the user provided positional arguments, decide how to handle them:
-            if args:
-                # 1) If there's exactly one required field in the schema, store *args under that field
-                if len(required_fields) == 1:
-                    field_name = required_fields[0]
-
-                    # If that field is not in 'props', fallback or just assume it
-                    if field_name not in props:
-                        logging.warning(f"Field '{field_name}' not found in properties. Using anyway.")
-
-                    # If there's exactly one positional argument, store it directly
-                    # If there's multiple, store them as a list, or handle them differently
-                    if len(args) == 1:
-                        final_args[field_name] = args[0]
-                    else:
-                        # If you want to store multiple positional arguments as a list
-                        final_args[field_name] = list(args)
-
-                # 2) If there's a single property but not necessarily 'required'
-                elif len(props) == 1:
-                    (single_prop,) = props.keys()
-                    if len(args) == 1:
-                        final_args[single_prop] = args[0]
-                    else:
-                        final_args[single_prop] = list(args)
-
-                # 3) Otherwise, store them in a fallback 'positional' key
-                else:
-                    # We put all *args in a separate key named e.g. "positional"
-                    final_args["positional"] = list(args)
+            final_args = await _parse_variadic_args(args, kwargs, props, required_fields)
 
             result = asyncio.run(session.call_tool(tool.name, final_args)).result()
             return result
 
-        dynamic_tool_schema = create_pydantic_model(f"{tool.name.capitalize()}ToolSchema", dict(tool.inputSchema["properties"]))
+        dynamic_tool_schema = _as_pydantic(f"{tool.name.capitalize()}ToolSchema", dict(tool.inputSchema["properties"]))
         return StructuredTool(
             name=tool.name,
             description=tool.description or f"{tool.name} tool",
@@ -119,6 +61,41 @@ async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredT
 
     structured_tools = [create_tool(tool) for tool in tools.tools]
     return [t for t in structured_tools if t is not None]
+
+
+async def _parse_variadic_args(args, kwargs, props, required_fields):
+    final_args = {k: v for k, v in kwargs.items()}
+    # If the user provided positional arguments, decide how to handle them:
+    if args:
+        # 1) If there's exactly one required field in the schema, store *args under that field
+        if len(required_fields) == 1:
+            field_name = required_fields[0]
+
+            # If that field is not in 'props', fallback or just assume it
+            if field_name not in props:
+                logging.warning(f"Field '{field_name}' not found in properties. Using anyway.")
+
+            # If there's exactly one positional argument, store it directly
+            # If there's multiple, store them as a list, or handle them differently
+            if len(args) == 1:
+                final_args[field_name] = args[0]
+            else:
+                # If you want to store multiple positional arguments as a list
+                final_args[field_name] = list(args)
+
+        # 2) If there's a single property but not necessarily 'required'
+        elif len(props) == 1:
+            (single_prop,) = props.keys()
+            if len(args) == 1:
+                final_args[single_prop] = args[0]
+            else:
+                final_args[single_prop] = list(args)
+
+        # 3) Otherwise, store them in a fallback 'positional' key
+        else:
+            # We put all *args in a separate key named e.g. "positional"
+            final_args["positional"] = list(args)
+    return final_args
 
 
 JSON_TYPE_MAPPING = {
@@ -131,7 +108,7 @@ JSON_TYPE_MAPPING = {
 }
 
 
-def create_pydantic_model(name: str, schema: Dict[str, Any]) -> Type[BaseModel]:
+def _as_pydantic(name: str, schema: Dict[str, Any]) -> Type[BaseModel]:
     """Dynamically creates a Pydantic model class from a dictionary schema, supporting multiple types."""
     fields = {}
 
