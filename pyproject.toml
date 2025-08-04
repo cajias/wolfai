@@ -21,7 +21,8 @@ dependencies = [
   "typer",
   "langgraph",
   "langchain-core",
-  "pyswip"
+  "pyswip",
+  "fastapi"
 ]
 
 [project.optional-dependencies]

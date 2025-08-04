@@ -26,6 +26,7 @@ opentelemetry-instrumentation-logging~=0.51b0
 opentelemetry-exporter-otlp~=1.30.0
 opentelemetry-semantic-conventions~=0.51b0
 
+fastapi~=0.115.6
 h11~=0.14.0
 httpx~=0.28.1
 httpx-sse~=0.4.0

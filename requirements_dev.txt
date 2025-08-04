@@ -18,6 +18,7 @@ ipython>=8.0.0
 ipdb>=0.13.0
 
 -r requirements.txt
+fastapi~=0.115.6
 h11~=0.14.0
 httpx~=0.28.1
 httpx-sse~=0.4.0

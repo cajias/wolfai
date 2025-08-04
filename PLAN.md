@@ -7,6 +7,7 @@
      - Frontend: React or Vue with WebSocket support.
 
 2. **Core Backend Service**
+   - [x] Skeleton FastAPI app with `/new-game`, `/action`, `/state`, `/end-game` and in-memory session management.
    - Wrap existing Arena logic in an HTTP API:
      - Endpoints: `/new-game`, `/action`, `/state`, `/end-game`.
      - Maintain hidden state server-side to prevent leaks.
