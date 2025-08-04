@@ -22,7 +22,7 @@ def generate_example_value(annotation: Any) -> Any:
     """Generate a representative example value for a type."""
     # Handle Optional types
     if get_origin(annotation) is typing.Union and type(None) in get_args(annotation):
-        inner_type = next(arg for arg in get_args(annotation) if arg != type(None))
+        inner_type = next(arg for arg in get_args(annotation) if arg is not type(None))
         return generate_example_value(inner_type)
 
     # Handle basic types
@@ -219,6 +219,42 @@ def function_to_mcp_tool(func: Callable, name: Optional[str] = None) -> types.To
     )
 
 
+def generate_tools_from_module(
+    module: Any,
+    *,
+    include_private: bool = False,
+    exclude: Optional[List[str]] = None,
+) -> List[types.Tool]:
+    """Generate MCP tools from all callable objects in a module.
+
+    Args:
+        module: Module or object containing callables.
+        include_private: Whether to include private functions (prefixed with `_`).
+        exclude: Optional list of function names to exclude.
+
+    Returns:
+        A list of generated Tool objects.
+    """
+
+    tools: List[types.Tool] = []
+    exclude = set(exclude or [])
+
+    for attr_name in dir(module):
+        if attr_name in exclude:
+            continue
+        if not include_private and attr_name.startswith("_"):
+            continue
+
+        attr = getattr(module, attr_name)
+        if callable(attr):
+            try:
+                tools.append(function_to_mcp_tool(attr, name=attr_name))
+            except Exception:
+                continue
+
+    return tools
+
+
 def function_to_mcp_prompt(func: Callable) -> types.Prompt:
     """
     Convert a Python function to an MCP prompt using type hints and docstrings.
@@ -340,12 +376,11 @@ def is_mp_prompt_type(obj):
     return is_prompt
 
 def is_mp_tool_type(obj):
-    is_prompt = (
+    is_tool = (
         hasattr(obj, '_is_mcp_tool') or
-        (inspect.isfunction(obj) and
-         obj.__annotations__.get('return') == MCPPrompt)
+        (inspect.isfunction(obj) and obj.__annotations__.get('return') != MCPPrompt)
     )
-    return is_prompt
+    return is_tool
 
 
 def generate_from_module(

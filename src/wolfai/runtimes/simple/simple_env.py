@@ -65,7 +65,7 @@ async def run_game():
         actor.env = env  # ✅ Now actors can call `env.emit()`
 
     # Start the environment event loop
-    env_task = asyncio.create_task(env.run())
+    asyncio.create_task(env.run())
 
     # Emit an event that will trigger actors to act
     await env.emit(Event(type="your_turn", to_actor_id="player1", data={}))
