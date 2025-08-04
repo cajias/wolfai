@@ -87,6 +87,7 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks integration tests",
     "gamelib: marks gamelib related tests",
+    "asyncio: marks tests that require asyncio",
 ]
 
 [tool.ruff]

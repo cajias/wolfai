@@ -182,7 +182,6 @@ class MockMCPSession:
     
     async def _mock_interpret_results(self, arguments: Dict[str, Any]) -> MockPromptResult:
         """Mock the results interpretation prompt."""
-        question = arguments.get("question", "")
         results = arguments.get("results", "")
         
         # Simulate an interpretation based on the results

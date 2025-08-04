@@ -9,12 +9,11 @@ from typing import (
 
 # OpenTelemetry imports
 try:
-    from opentelemetry import trace, context
+    from opentelemetry import trace
     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
     from opentelemetry.instrumentation.logging import LoggingInstrumentor
     from opentelemetry.sdk.trace import TracerProvider
     from opentelemetry.sdk.trace.export import BatchSpanProcessor
-    from opentelemetry.semconv.trace import SpanAttributes
 
     OPENTELEMETRY_AVAILABLE = True
 except ImportError:
