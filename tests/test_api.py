@@ -33,3 +33,33 @@ def test_game_flow() -> None:
     # Game should no longer exist
     response = client.get(f"/state/{game_id}")
     assert response.status_code == 404
+
+
+def test_websocket_updates() -> None:
+    client = TestClient(app)
+
+    game_id = client.post("/new-game").json()["game_id"]
+
+    with client.websocket_connect(f"/ws/{game_id}") as websocket:
+        client.post(
+            "/action",
+            json={"game_id": game_id, "actor_id": "p1", "action": "ping"},
+        )
+        data = websocket.receive_json()
+        assert data["actions"] == ["ping"]
+
+
+def test_websocket_broadcasts_to_all_clients() -> None:
+    client = TestClient(app)
+
+    game_id = client.post("/new-game").json()["game_id"]
+
+    with client.websocket_connect(f"/ws/{game_id}") as ws1, client.websocket_connect(
+        f"/ws/{game_id}"
+    ) as ws2:
+        client.post(
+            "/action",
+            json={"game_id": game_id, "actor_id": "p1", "action": "pong"},
+        )
+        assert ws1.receive_json()["actions"] == ["pong"]
+        assert ws2.receive_json()["actions"] == ["pong"]

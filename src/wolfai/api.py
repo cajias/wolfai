@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Dict, List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 app = FastAPI()
@@ -37,6 +37,20 @@ class Status(BaseModel):
 
 
 _games: Dict[str, GameState] = {}
+_connections: Dict[str, List[WebSocket]] = {}
+
+
+async def _broadcast(game_id: str) -> None:
+    """Send the current state to all connected clients."""
+
+    state = _games.get(game_id)
+    if state is None:
+        return
+    for ws in list(_connections.get(game_id, [])):
+        try:
+            await ws.send_json(state.model_dump())
+        except Exception:
+            _connections[game_id].remove(ws)
 
 
 @app.post("/new-game", response_model=GameId)
@@ -57,6 +71,7 @@ async def action(event: Action) -> Status:
         raise HTTPException(status_code=404, detail="Game not found")
     game.actions.append(event.action)
     game.state = "updated"
+    await _broadcast(event.game_id)
     return Status(status="ok")
 
 
@@ -76,4 +91,19 @@ async def end_game(game_id: GameId) -> Status:
 
     if _games.pop(game_id.game_id, None) is None:
         raise HTTPException(status_code=404, detail="Game not found")
+    for ws in _connections.pop(game_id.game_id, []):
+        await ws.close()
     return Status(status="ended")
+
+
+@app.websocket("/ws/{game_id}")
+async def websocket_updates(websocket: WebSocket, game_id: str) -> None:
+    """Allow clients to subscribe to game state updates."""
+
+    await websocket.accept()
+    _connections.setdefault(game_id, []).append(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        _connections[game_id].remove(websocket)
