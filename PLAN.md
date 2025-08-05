@@ -12,8 +12,8 @@
      - Endpoints: `/new-game`, `/action`, `/state`, `/end-game`.
      - Maintain hidden state server-side to prevent leaks.
    - Implement session/game IDs and state management (in-memory or database).
-   - Add WebSockets or server-sent events for live updates.
-   - Unit tests for game flow and API stability.
+   - [x] Add WebSockets for live updates.
+   - [x] Unit tests for game flow and API stability.
 
 3. **Front-End Application**
    - SPA that connects to API and subscribes to state updates.
