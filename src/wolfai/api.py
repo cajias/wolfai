@@ -6,11 +6,13 @@ from typing import Dict, List
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
+from .arena import Arena
+
 app = FastAPI()
 
 
 class GameState(BaseModel):
-    """Simple in-memory representation of game state."""
+    """Public representation of a game session."""
 
     state: str
     actions: List[str] = Field(default_factory=list)
@@ -36,19 +38,21 @@ class Status(BaseModel):
     status: str
 
 
-_games: Dict[str, GameState] = {}
+# In-memory store of active game sessions. Each session is backed by an
+# ``Arena`` instance which maintains hidden state such as player roles.
+_games: Dict[str, Arena] = {}
 _connections: Dict[str, List[WebSocket]] = {}
 
 
 async def _broadcast(game_id: str) -> None:
     """Send the current state to all connected clients."""
 
-    state = _games.get(game_id)
-    if state is None:
+    arena = _games.get(game_id)
+    if arena is None:
         return
     for ws in list(_connections.get(game_id, [])):
         try:
-            await ws.send_json(state.model_dump())
+            await ws.send_json(GameState(**arena.public_view()).model_dump())
         except Exception:
             _connections[game_id].remove(ws)
 
@@ -58,7 +62,12 @@ async def new_game() -> GameId:
     """Create a new game and return its identifier."""
 
     game_id = str(uuid.uuid4())
-    _games[game_id] = GameState(state="initialized")
+    arena = Arena()
+    # Example hidden state: assign roles to two players. The roles are never
+    # exposed through the API but are kept server-side for game logic.
+    arena.add_player("player1", "villager")
+    arena.add_player("player2", "werewolf")
+    _games[game_id] = arena
     return GameId(game_id=game_id)
 
 
@@ -66,11 +75,10 @@ async def new_game() -> GameId:
 async def action(event: Action) -> Status:
     """Submit an action for a given game."""
 
-    game = _games.get(event.game_id)
-    if game is None:
+    arena = _games.get(event.game_id)
+    if arena is None:
         raise HTTPException(status_code=404, detail="Game not found")
-    game.actions.append(event.action)
-    game.state = "updated"
+    arena.apply_action(event.actor_id, event.action)
     await _broadcast(event.game_id)
     return Status(status="ok")
 
@@ -79,10 +87,10 @@ async def action(event: Action) -> Status:
 async def get_state(game_id: str) -> GameState:
     """Retrieve the current state of a game."""
 
-    game = _games.get(game_id)
-    if game is None:
+    arena = _games.get(game_id)
+    if arena is None:
         raise HTTPException(status_code=404, detail="Game not found")
-    return game
+    return GameState(**arena.public_view())
 
 
 @app.post("/end-game", response_model=Status)

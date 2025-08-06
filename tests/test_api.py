@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from src.wolfai.api import app
+from src.wolfai.api import app, _games
 
 
 def test_game_flow() -> None:
@@ -63,3 +63,19 @@ def test_websocket_broadcasts_to_all_clients() -> None:
         )
         assert ws1.receive_json()["actions"] == ["pong"]
         assert ws2.receive_json()["actions"] == ["pong"]
+
+
+def test_hidden_state_not_exposed() -> None:
+    """Ensure that secret server-side data stays hidden from clients."""
+
+    client = TestClient(app)
+
+    game_id = client.post("/new-game").json()["game_id"]
+
+    # The arena stores hidden roles for players
+    assert _games[game_id].roles
+
+    # Public state should not leak the roles
+    response = client.get(f"/state/{game_id}")
+    assert response.status_code == 200
+    assert "roles" not in response.json()
