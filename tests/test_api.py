@@ -79,3 +79,18 @@ def test_hidden_state_not_exposed() -> None:
     response = client.get(f"/state/{game_id}")
     assert response.status_code == 200
     assert "roles" not in response.json()
+
+
+def test_list_games_endpoint() -> None:
+    """Games endpoint returns active game identifiers."""
+
+    client = TestClient(app)
+
+    _games.clear()
+    assert client.get("/games").json()["games"] == []
+
+    game_id = client.post("/new-game").json()["game_id"]
+    assert client.get("/games").json()["games"] == [game_id]
+
+    client.post("/end-game", json={"game_id": game_id})
+    assert client.get("/games").json()["games"] == []
