@@ -38,6 +38,12 @@ class Status(BaseModel):
     status: str
 
 
+class GameList(BaseModel):
+    """Collection of active game identifiers."""
+
+    games: List[str] = Field(default_factory=list)
+
+
 # In-memory store of active game sessions. Each session is backed by an
 # ``Arena`` instance which maintains hidden state such as player roles.
 _games: Dict[str, Arena] = {}
@@ -55,6 +61,13 @@ async def _broadcast(game_id: str) -> None:
             await ws.send_json(GameState(**arena.public_view()).model_dump())
         except Exception:
             _connections[game_id].remove(ws)
+
+
+@app.get("/games", response_model=GameList)
+async def list_games() -> GameList:
+    """Return identifiers for all active game sessions."""
+
+    return GameList(games=list(_games.keys()))
 
 
 @app.post("/new-game", response_model=GameId)
