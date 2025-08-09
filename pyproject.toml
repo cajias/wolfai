@@ -21,8 +21,13 @@ dependencies = [
   "typer",
   "langgraph",
   "langchain-core",
+  "langchain",
+  "langchain-openai",
   "pyswip",
-  "fastapi"
+  "fastapi",
+  "python-dotenv",
+  "docstring-parser",
+  "mcp"
 ]
 
 [project.optional-dependencies]
