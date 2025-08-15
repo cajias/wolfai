@@ -1,0 +1,7 @@
+{
+  "name": "wolfai-monorepo",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ]
+}
