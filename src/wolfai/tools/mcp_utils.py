@@ -6,7 +6,9 @@ from datetime import datetime, date
 from typing import Any, Callable, Dict, List, Optional, get_origin, get_args
 
 import docstring_parser
-import mcp.types as types
+from mcp import types
+
+PAIR_LENGTH = 2
 
 
 @dataclass
@@ -20,12 +22,9 @@ class MCPPrompt:
 
 def generate_example_value(annotation: Any) -> Any:
     """Generate a representative example value for a type."""
-    # Handle Optional types
     if get_origin(annotation) is typing.Union and type(None) in get_args(annotation):
-        inner_type = next(arg for arg in get_args(annotation) if arg is not type(None))
-        return generate_example_value(inner_type)
+        annotation = next(arg for arg in get_args(annotation) if arg is not type(None))
 
-    # Handle basic types
     type_examples = {
         str: "example_text",
         int: 42,
@@ -38,21 +37,17 @@ def generate_example_value(annotation: Any) -> Any:
     if annotation in type_examples:
         return type_examples[annotation]
 
-    # Handle List types
     if get_origin(annotation) is list:
         if get_args(annotation):
             inner_type = get_args(annotation)[0]
             return [generate_example_value(inner_type)]
         return ["example_item"]
 
-    # Handle Dict types
     if get_origin(annotation) is dict:
         args = get_args(annotation)
-        if len(args) == 2:
+        if len(args) == PAIR_LENGTH:
             key_type, value_type = args
-            return {
-                str(generate_example_value(key_type)): generate_example_value(value_type)
-            }
+            return {str(generate_example_value(key_type)): generate_example_value(value_type)}
         return {"key": "value"}
 
     return "example_value"
@@ -82,7 +77,7 @@ def get_type_validation_rules(annotation: Any) -> Dict[str, Any]:
 
     # Handle Dict types (only string keys)
     if get_origin(annotation) is dict:
-        value_type = get_args(annotation)[1] if len(get_args(annotation)) == 2 else Any
+        value_type = get_args(annotation)[1] if len(get_args(annotation)) == PAIR_LENGTH else Any
         return {"type": "object", "additionalProperties": get_type_validation_rules(value_type)}
 
     return {}  # Return empty schema if type is unknown
@@ -304,9 +299,9 @@ def prompt(func: Optional[Callable] = None, *, name: Optional[str] = None):
     """
 
     def decorator(f: Callable) -> Callable:
-        setattr(f, '_is_mcp_prompt', True)
+        f._is_mcp_prompt = True
         if name:
-            setattr(f, '_mcp_prompt_name', name)
+            f._mcp_prompt_name = name
         return f
 
     if func is None:
@@ -321,9 +316,9 @@ def tool(func: Optional[Callable] = None, *, name: Optional[str] = None):
     """
 
     def decorator(f: Callable) -> Callable:
-        setattr(f, '_is_mcp_tool', True)
+        f._is_mcp_tool = True
         if name:
-            setattr(f, '_mcp_tool_name', name)
+            f._mcp_tool_name = name
         return f
 
     if func is None:
@@ -359,7 +354,7 @@ def generate_prompts_from_module(
             prompt = function_to_mcp_prompt(obj)
             # Override name if specified in decorator
             if hasattr(obj, '_mcp_prompt_name'):
-                prompt.name = getattr(obj, '_mcp_prompt_name')
+                prompt.name = obj._mcp_prompt_name
             prompts.append(prompt)
         except Exception as e:
             print(f"Warning: Could not convert {name} to prompt: {e}")

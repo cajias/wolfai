@@ -2,7 +2,7 @@
 
 import pytest
 from typing import Dict, Any, List, Optional
-import mcp.types as types
+from mcp import types
 from dataclasses import dataclass
 
 

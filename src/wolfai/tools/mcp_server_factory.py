@@ -4,10 +4,13 @@ import inspect
 from typing import Any, Callable, Dict, Optional
 
 import anyio
-import mcp.types as types
+from mcp import types
 from mcp.server.lowlevel import Server
 
 from wolfai.tools.mcp_utils import generate_from_module
+
+
+PAIR_LENGTH = 2
 
 
 class ModuleServer:
@@ -45,7 +48,7 @@ class ModuleServer:
     @staticmethod
     def _format_result(result: Any) -> list[types.TextContent]:
         """Format any result into MCP text content."""
-        if isinstance(result, (list, tuple)) and len(result) == 2:
+        if isinstance(result, (list, tuple)) and len(result) == PAIR_LENGTH:
             # Handle case where function returns (result, state)
             result, state = result
 
@@ -77,7 +80,7 @@ class ModuleServer:
             result = func(**arguments)
 
             # Update session state if returned
-            if isinstance(result, tuple) and len(result) == 2:
+            if isinstance(result, tuple) and len(result) == PAIR_LENGTH:
                 result, new_state = result
                 self.session_store[session_id] = new_state
 

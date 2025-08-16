@@ -208,42 +208,9 @@ def _load_facts(prolog: Prolog, facts: List[str], namespace: str) -> Optional[st
         return None
 
     try:
-        # First analyze and declare all predicates as dynamic
-        seen_predicates = set()
-        arity_map = {}  # Track arity for each predicate
+        seen_predicates, arity_map = _analyze_predicates(facts)
+        _declare_predicates(prolog, namespace, seen_predicates, arity_map)
 
-        # First pass: analyze predicates and their arity
-        for fact in facts:
-            if fact.endswith('.'):
-                fact = fact[:-1]
-            if ':-' in fact:
-                # Handle rules: analyze both head and body
-                head = fact[:fact.index('(')]
-                arity = fact.count(',') + 1 if '(' in fact else 0
-                seen_predicates.add(head)
-                arity_map[head] = arity
-
-                # Analyze predicates in rule body
-                for part in fact.split(':-')[1].split(','):
-                    part = part.strip()
-                    if '(' in part:
-                        pred = part[:part.index('(')]
-                        arity = part.count(',') + 1
-                        seen_predicates.add(pred)
-                        arity_map[pred] = arity
-            else:
-                # Handle simple facts
-                pred = fact[:fact.index('(')] if '(' in fact else fact
-                arity = fact.count(',') + 1 if '(' in fact else 0
-                seen_predicates.add(pred)
-                arity_map[pred] = arity
-
-        # Declare all predicates as dynamic with correct arity
-        for pred in seen_predicates:
-            arity = arity_map.get(pred, 2)  # Default to arity 2 if unsure
-            list(prolog.query(f"dynamic({namespace}_{pred}/{arity})"))
-
-        # Second pass: add the facts with proper namespacing
         for fact in facts:
             fact = fact.strip()
             if not fact or fact.startswith('%'):
@@ -258,6 +225,46 @@ def _load_facts(prolog: Prolog, facts: List[str], namespace: str) -> Optional[st
         return None
     except Exception as e:
         return str(e)
+
+
+DEFAULT_ARITY = 2
+
+
+def _analyze_predicates(facts: List[str]) -> tuple[set[str], dict[str, int]]:
+    """Analyze predicates and determine arity for each."""
+    seen_predicates: set[str] = set()
+    arity_map: dict[str, int] = {}
+    for fact in facts:
+        original = fact
+        if fact.endswith('.'):
+            fact = fact[:-1]
+        if ':-' in fact:
+            head = fact[:fact.index('(')]
+            arity = fact.count(',') + 1 if '(' in fact else 0
+            seen_predicates.add(head)
+            arity_map[head] = arity
+            for part in original.split(':-')[1].split(','):
+                part = part.strip()
+                if '(' in part:
+                    pred = part[:part.index('(')]
+                    arity = part.count(',') + 1
+                    seen_predicates.add(pred)
+                    arity_map[pred] = arity
+        else:
+            pred = fact[:fact.index('(')] if '(' in fact else fact
+            arity = fact.count(',') + 1 if '(' in fact else 0
+            seen_predicates.add(pred)
+            arity_map[pred] = arity
+    return seen_predicates, arity_map
+
+
+def _declare_predicates(
+    prolog: Prolog, namespace: str, seen_predicates: set[str], arity_map: dict[str, int]
+) -> None:
+    """Declare predicates as dynamic with the correct arity."""
+    for pred in seen_predicates:
+        arity = arity_map.get(pred, DEFAULT_ARITY)
+        list(prolog.query(f"dynamic({namespace}_{pred}/{arity})"))
 
 
 @tool

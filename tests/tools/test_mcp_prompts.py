@@ -1,6 +1,6 @@
 """Tests for MCP prompt functionality in mcp_utils."""
 
-import mcp.types as types
+from mcp import types
 import pytest
 from src.wolfai.tools.mcp_utils import (
     MCPPrompt,
