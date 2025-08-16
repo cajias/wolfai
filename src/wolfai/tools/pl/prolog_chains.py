@@ -1,7 +1,7 @@
 """MCP prompt chain for natural language to Prolog reasoning."""
 
 from src.wolfai.tools.mcp_utils import MCPPrompt, prompt
-import mcp.types as types
+from mcp import types
 
 
 @prompt(name="prolog-reasoning")
