@@ -4,7 +4,8 @@ import logging
 import sys
 from typing import List, Optional
 
-from langchain.agents import initialize_agent, AgentType
+# TODO: Fix deprecated import - initialize_agent and AgentType are deprecated in LangChain 1.0+
+# from langchain.agents import initialize_agent, AgentType
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import HumanMessage, AIMessage
@@ -116,14 +117,19 @@ class PrologAgent:
                     langchain_mcp_tools = await get_mcp_tools_as_langchain(session)
                     logger.debug(f"Successfully retrieved {len(langchain_mcp_tools)} tools")
 
-                    logger.debug("Initializing LangChain agent executor")
-                    self.agent_executor =  initialize_agent(
-                        tools=langchain_mcp_tools,  # ✅ Now using StructuredTool
-                        llm=self.model,
-                        agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-                        verbose=True
+                    # TODO: Fix deprecated initialize_agent usage - use create_react_agent or similar
+                    # logger.debug("Initializing LangChain agent executor")
+                    # self.agent_executor =  initialize_agent(
+                    #     tools=langchain_mcp_tools,  # ✅ Now using StructuredTool
+                    #     llm=self.model,
+                    #     agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+                    #     verbose=True
+                    # )
+                    # logger.debug("Agent executor initialized successfully")
+                    raise NotImplementedError(
+                        "PrologAgent requires migration from deprecated initialize_agent to LangChain 1.0+ API. "
+                        "See: https://python.langchain.com/docs/how_to/migrate_agent/"
                     )
-                    logger.debug("Agent executor initialized successfully")
         except Exception as e:
             logger.error(f"Error during Prolog agent initialization: {str(e)}", exc_info=True)
             raise

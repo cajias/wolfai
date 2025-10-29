@@ -7,6 +7,13 @@ import threading
 import queue
 import traceback
 import pytest
+
+# Skip entire module if SWI-Prolog is not available
+try:
+    import pyswip  # noqa: F401
+except Exception:
+    pytest.skip("SWI-Prolog not available", allow_module_level=True)
+
 from dotenv import load_dotenv
 
 from langchain_openai import ChatOpenAI

@@ -1,5 +1,13 @@
 """Tests for the functional Prolog execution engine."""
 
+import pytest
+
+# Skip entire module if SWI-Prolog is not available
+try:
+    import pyswip  # noqa: F401
+except Exception:
+    pytest.skip("SWI-Prolog not available", allow_module_level=True)
+
 from wolfai.tools.pl.prolog import (
     consult, _execute, parse_prolog_code
 )

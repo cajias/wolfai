@@ -1,5 +1,14 @@
 """Runtime components for WolfAI."""
 
-from .prolog import PrologState, PrologResult, consult, _execute
+# Lazy imports to avoid requiring SWI-Prolog at import time
+# Import directly when needed: from wolfai.tools.pl.prolog import PrologState, ...
 
 __all__ = ['PrologState', 'PrologResult', 'consult', '_execute']
+
+
+def __getattr__(name):
+    """Lazy import for prolog tools to avoid requiring SWI-Prolog at import time."""
+    if name in __all__:
+        from .prolog import PrologState, PrologResult, consult, _execute
+        return locals()[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
