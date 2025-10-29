@@ -21,6 +21,15 @@ The system consists of several key components working together to enable intelli
 - **Probability Models**: Bayesian Inference, HMMs, Kalman Filters, and POMDPs allow the AI to update and refine its beliefs.
 
 
+Repository Layout
+=================
+
+This project uses a monorepo structure with separate top-level packages:
+
+- ``backend/`` – Python application code, tests, and build configuration.
+- ``frontend/`` – Web client assets and build tooling.
+
+
 System Architecture
 ===================
 
