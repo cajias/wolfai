@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "wolfai"
 version = "0.1.0"
 description = "Werewolf player"
-readme = "README.rst"
+readme = "README.md"
 authors = [
   {name = "Raul Cajias", email = "raul@cajias.io"}
 ]
