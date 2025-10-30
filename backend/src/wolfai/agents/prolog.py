@@ -4,12 +4,11 @@ import logging
 import sys
 from typing import List, Optional
 
-# TODO: Fix deprecated import - initialize_agent and AgentType are deprecated in LangChain 1.0+
-# from langchain.agents import initialize_agent, AgentType
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.runnables import RunnableConfig
+from langgraph.prebuilt import create_react_agent
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -30,19 +29,18 @@ class PrologAgent:
 
     This agent integrates a language model and a Prolog reasoning engine. It converts natural
     language into Prolog logic and executes those logical statements through a Prolog server.
-    Key features involve dynamic tool usage and zero-shot reasoning capabilities, enabled by
-    LangChain's agent framework.
+    Uses LangGraph's ReAct agent pattern for tool-calling and reasoning.
 
     Features:
     - Converts natural language into logical Prolog statements.
     - Executes the Prolog logic via the stdio protocol.
     - Dynamically retrieves and integrates tools for solving complex queries.
-    - Applies advanced reasoning by leveraging the capabilities of LangChain's agent framework.
+    - Applies ReAct (Reasoning + Acting) pattern via LangGraph's create_react_agent.
 
     Attributes:
         model (BaseChatModel): Language model performing natural language to Prolog conversion.
         prolog_server_params (StdioServerParameters): Configuration parameters for Prolog server connection.
-        agent_executor (Optional): LangChain's agent executor for processing queries with Prolog tools.
+        agent_executor (Optional): LangGraph ReAct agent for processing queries with Prolog tools.
     """
 
     def __init__(self, model: BaseChatModel, prolog_server_params: StdioServerParameters):
@@ -74,17 +72,17 @@ class PrologAgent:
         Initialize communication with the Prolog server and setup tools.
 
         This method performs the critical task of connecting to the Prolog server, initializing
-        its session, and integrating Prolog-compatible tools into the LangChain framework.
+        its session, and integrating Prolog-compatible tools into the LangGraph ReAct agent.
         It creates the `agent_executor` using the retrieved tools and binds it to the language model for
         dynamic query resolution.
 
         Detailed Workflow:
         1. Establishes a client session for Prolog communication through stdio.
         2. Dynamically retrieves Prolog tools as LangChain-compatible tools.
-        3. Instantiates LangChain's agent executor in "zero-shot reasoning" mode.
+        3. Creates a LangGraph ReAct agent using create_react_agent.
 
         Key Functionalities:
-        - Enables tool-based dynamic reasoning via LangChain.
+        - Enables tool-based dynamic reasoning via LangGraph's ReAct pattern.
         - Validates server responses, ensuring readiness for the Prolog engine.
 
         Raises:
@@ -117,19 +115,13 @@ class PrologAgent:
                     langchain_mcp_tools = await get_mcp_tools_as_langchain(session)
                     logger.debug(f"Successfully retrieved {len(langchain_mcp_tools)} tools")
 
-                    # TODO: Fix deprecated initialize_agent usage - use create_react_agent or similar
-                    # logger.debug("Initializing LangChain agent executor")
-                    # self.agent_executor =  initialize_agent(
-                    #     tools=langchain_mcp_tools,  # ✅ Now using StructuredTool
-                    #     llm=self.model,
-                    #     agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-                    #     verbose=True
-                    # )
-                    # logger.debug("Agent executor initialized successfully")
-                    raise NotImplementedError(
-                        "PrologAgent requires migration from deprecated initialize_agent to LangChain 1.0+ API. "
-                        "See: https://python.langchain.com/docs/how_to/migrate_agent/"
+                    # Create ReAct agent using LangGraph (replaces deprecated initialize_agent)
+                    logger.debug("Creating ReAct agent with LangGraph")
+                    self.agent_executor = create_react_agent(
+                        model=self.model,
+                        tools=langchain_mcp_tools
                     )
+                    logger.debug("Agent executor initialized successfully")
         except Exception as e:
             logger.error(f"Error during Prolog agent initialization: {str(e)}", exc_info=True)
             raise
@@ -192,11 +184,27 @@ class PrologAgent:
             logger.debug(f"Processing last message: {last_message.content[:100]}...")
 
             # Get response from model with tools
-            logger.debug("Invoking model with processed message")
+            # LangGraph agents expect messages in a dict: {"messages": [...]}
+            logger.debug("Invoking ReAct agent with messages")
             try:
-                response = await invoke_agent_with_retry(self.agent_executor, last_message.content)
-                logger.debug("Response from model successfully received")
-                return AIMessage(content=response['output'])
+                response = await invoke_agent_with_retry(
+                    self.agent_executor,
+                    {"messages": messages}
+                )
+                logger.debug("Response from agent successfully received")
+
+                # LangGraph returns state dict with messages list
+                # Extract the last AI message from the response
+                response_messages = response.get("messages", [])
+                if response_messages:
+                    last_response = response_messages[-1]
+                    if isinstance(last_response, AIMessage):
+                        return last_response
+                    # If it's not an AIMessage, wrap the content
+                    return AIMessage(content=str(last_response.content))
+
+                return AIMessage(content="No response generated from agent.")
+
             except asyncio.TimeoutError:
                 logger.error("Timeout occurred during model response generation")
                 return AIMessage(content="I apologize, but the operation timed out. Please try again.")
