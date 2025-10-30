@@ -1,9 +1,16 @@
 """Tests for the Prolog agent."""
 
 import pytest
+
+# Skip entire module if SWI-Prolog is not available
+try:
+    import pyswip  # noqa: F401
+except Exception:
+    pytest.skip("SWI-Prolog not available", allow_module_level=True)
+
 from unittest.mock import Mock, AsyncMock
 from mcp import ClientSession
-from src.wolfai.agents.prolog import PrologAgent
+from wolfai.agents.prolog import PrologAgent
 
 
 @pytest.fixture

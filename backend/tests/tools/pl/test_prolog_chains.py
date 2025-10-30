@@ -1,7 +1,14 @@
 """Tests for Prolog chain prompts."""
 
 import pytest
-from src.wolfai.tools.pl.prolog_chains import (
+
+# Skip entire module if SWI-Prolog is not available
+try:
+    import pyswip  # noqa: F401
+except Exception:
+    pytest.skip("SWI-Prolog not available", allow_module_level=True)
+
+from wolfai.tools.pl.prolog_chains import (
     create_prolog_chain_prompt,
     create_converter_prompt,
     create_interpreter_prompt

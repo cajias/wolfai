@@ -1,0 +1,11 @@
+{
+  "name": "wolfai-backend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WolfAI backend - Python FastAPI service",
+  "scripts": {
+    "test": "pytest",
+    "lint": "ruff check .",
+    "build": "python -m build"
+  }
+}
