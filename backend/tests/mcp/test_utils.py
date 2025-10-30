@@ -4,7 +4,7 @@ import inspect
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date
 import pytest
-from wolfai.tools.mcp_utils import (
+from wolfai.mcp.utils import (
     function_to_mcp_tool,
     generate_tools_from_module,
     get_parameter_schema,

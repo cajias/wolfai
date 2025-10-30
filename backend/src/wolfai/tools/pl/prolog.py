@@ -24,7 +24,7 @@ from typing import Dict, List, Any, Optional, Tuple
 
 from pyswip import Prolog
 
-from wolfai.tools.mcp_utils import tool
+from wolfai.mcp.utils import tool
 
 
 @dataclass(frozen=True)

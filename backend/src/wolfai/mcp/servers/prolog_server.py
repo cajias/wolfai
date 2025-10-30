@@ -2,8 +2,8 @@
 
 import click
 
-from wolfai.tools import mcp_server_factory
-from . import prolog
+from wolfai.mcp import server as mcp_server
+from wolfai.tools.pl import prolog
 
 
 def main():
@@ -17,7 +17,7 @@ def main():
         help="Transport type",
     )
     def cli(port: int, transport: str):
-        mcp_server_factory.run_server(module=prolog, port=port, transport=transport)
+        mcp_server.run_server(module=prolog, port=port, transport=transport)
 
     cli()
 

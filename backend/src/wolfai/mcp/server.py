@@ -7,7 +7,7 @@ import anyio
 from mcp import types
 from mcp.server.lowlevel import Server
 
-from wolfai.tools.mcp_utils import generate_from_module
+from wolfai.mcp.utils import generate_from_module
 
 
 PAIR_LENGTH = 2
