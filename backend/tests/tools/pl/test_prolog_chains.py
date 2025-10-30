@@ -8,7 +8,7 @@ try:
 except Exception:
     pytest.skip("SWI-Prolog not available", allow_module_level=True)
 
-from src.wolfai.tools.pl.prolog_chains import (
+from wolfai.tools.pl.prolog_chains import (
     create_prolog_chain_prompt,
     create_converter_prompt,
     create_interpreter_prompt
