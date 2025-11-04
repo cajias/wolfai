@@ -1,0 +1,24 @@
+[MASTER]
+# Focus only on duplicate code detection
+# Disable all other checks to keep this fast and focused
+disable=all
+enable=duplicate-code
+
+# Use multiple processes for speed
+jobs=0
+
+[SIMILARITIES]
+# Minimum lines number of a similarity.
+min-similarity-lines=4
+
+# Ignore comments when computing similarities.
+ignore-comments=yes
+
+# Ignore docstrings when computing similarities.
+ignore-docstrings=yes
+
+# Ignore imports when computing similarities.
+ignore-imports=yes
+
+# Signatures are removed from the similarity computation
+ignore-signatures=yes

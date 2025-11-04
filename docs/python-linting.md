@@ -4,16 +4,24 @@ This document describes the Python linting setup in the WolfAI project.
 
 ## Linting Tools
 
-We use [Ruff](https://github.com/astral-sh/ruff) as our primary Python linter. Ruff is a fast, comprehensive Python linter written in Rust that combines the functionality of multiple Python linters including:
+We use two complementary linting tools:
+
+### 1. Ruff (Primary Linter)
+[Ruff](https://github.com/astral-sh/ruff) is our primary Python linter - a fast, comprehensive linter written in Rust that combines the functionality of:
 
 - Flake8 (and many of its plugins)
 - isort
 - pyupgrade
 - autoflake
-- Pylint
+- Pylint refactor checks
 - and more
 
+### 2. Pylint (Duplicate Code Detection)
+[Pylint](https://pylint.pycqa.org/) is used specifically for duplicate code detection (R0801). It finds similar code blocks across files that could be refactored into shared functions or modules.
+
 ## Configuration
+
+### Ruff Configuration
 
 Ruff is configured in the `backend/pyproject.toml` file with comprehensive linting rules:
 
@@ -69,6 +77,42 @@ The configuration enforces the following limits to maintain code quality:
 - Maximum statements per function: 50
 - Maximum cyclomatic complexity: 10
 
+### Pylint Configuration
+
+Pylint is configured in `backend/.pylintrc` for focused duplicate code detection:
+
+```ini
+[MASTER]
+# Focus only on duplicate code detection
+disable=all
+enable=duplicate-code
+
+# Use multiple processes for speed
+jobs=0
+
+[SIMILARITIES]
+# Minimum lines number of a similarity.
+min-similarity-lines=4
+
+# Ignore comments when computing similarities.
+ignore-comments=yes
+
+# Ignore docstrings when computing similarities.
+ignore-docstrings=yes
+
+# Ignore imports when computing similarities.
+ignore-imports=yes
+
+# Signatures are removed from the similarity computation
+ignore-signatures=yes
+```
+
+This configuration:
+- Only enables the `duplicate-code` (R0801) check for performance
+- Detects code blocks with 4+ similar lines
+- Ignores comments, docstrings, imports, and signatures when comparing
+- Uses multiple processes for faster analysis
+
 ## Running the Linter
 
 You can run the linter using the following commands:
@@ -77,9 +121,16 @@ You can run the linter using the following commands:
 # Run Ruff on the entire project (from root directory)
 npm run lint:py
 
+# Check for duplicate code blocks
+npm run lint:py:dupes
+
 # Run Ruff directly in the backend directory
 cd backend
 python3 -m ruff check src/ tests/
+
+# Run duplicate detection directly
+cd backend
+python3 -m pylint --rcfile=.pylintrc src/ tests/
 
 # Fix automatically fixable issues
 python3 -m ruff check --fix src/ tests/
@@ -106,12 +157,23 @@ This script will:
 
 ## Current Status
 
+### Ruff Linting
 ✅ **All linting checks pass!** The codebase is fully compliant with our strict linting rules.
 
 All 111 previously identified issues have been fixed, including:
 - Import sorting and organization
 - Code formatting and whitespace
 - All issues were resolved using Ruff's auto-fix capabilities
+
+### Duplicate Code Detection
+⚠️ **Code Quality: 9.96/10** - Some duplicate code blocks detected.
+
+Current duplicate code findings:
+- **Logging setup**: Similar logging configuration in multiple files
+- **Pytest fixtures**: SWI-Prolog availability checks duplicated in conftest files
+- **MCP message structures**: Similar message construction patterns across test files
+
+These duplicates are opportunities for refactoring but don't block development. Consider extracting common patterns into shared utilities when appropriate.
 
 ## Best Practices
 
@@ -220,7 +282,8 @@ Ruff should be integrated into the CI pipeline to run automatically on all pull 
 
 ## Available Scripts
 
-- `npm run lint:py` - Run linter on Python code
+- `npm run lint:py` - Run Ruff linter on Python code
+- `npm run lint:py:dupes` - Check for duplicate code blocks
 - `npm run lint:py:fix` - Auto-fix linting issues
 - `npm run test:py` - Run Python tests
 
@@ -228,4 +291,6 @@ Ruff should be integrated into the CI pipeline to run automatically on all pull 
 
 - [Ruff Documentation](https://docs.astral.sh/ruff/)
 - [Ruff Rules Reference](https://docs.astral.sh/ruff/rules/)
+- [Pylint Documentation](https://pylint.pycqa.org/)
+- [Pylint Duplicate Code Detection](https://pylint.pycqa.org/en/latest/user_guide/messages/refactor/duplicate-code.html)
 - [Python Code Quality Tools](https://realpython.com/python-code-quality/)

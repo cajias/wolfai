@@ -8,6 +8,7 @@
   "scripts": {
     "lint:py": "cd backend && poetry run ruff check src/ tests/",
     "lint:py:fix": "bash scripts/fix-python-issues.sh",
+    "lint:py:dupes": "cd backend && poetry run pylint --rcfile=.pylintrc src/ tests/",
     "test:py": "cd backend && poetry run pytest"
   }
 }

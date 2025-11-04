@@ -36,7 +36,8 @@ dev = [
     "mypy",  # linting
     "pytest",  # testing
     "pytest-asyncio",  # async testing
-    "ruff"  # linting
+    "ruff",  # linting
+    "pylint"  # duplicate code detection
 ]
 
 [project.urls]
