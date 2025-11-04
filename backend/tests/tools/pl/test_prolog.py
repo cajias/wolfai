@@ -8,9 +8,8 @@ try:
 except Exception:
     pytest.skip("SWI-Prolog not available", allow_module_level=True)
 
-from wolfai.tools.pl.prolog import (
-    consult, _execute, parse_prolog_code
-)
+from wolfai.tools.pl.prolog import _execute, consult, parse_prolog_code
+
 
 def test_parse_prolog_code():
     """Test parsing Prolog code into statements."""

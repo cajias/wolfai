@@ -1,28 +1,21 @@
 """LangGraph agent for Prolog reasoning."""
 import asyncio
-import logging
-import sys
 from typing import List, Optional
 
 # TODO: Fix deprecated import - initialize_agent and AgentType are deprecated in LangChain 1.0+
 # from langchain.agents import initialize_agent, AgentType
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from wolfai.agents.utils import invoke_agent_with_retry
+from wolfai.logging import configure_basic_logging
 from wolfai.tools.langchain_utils import get_mcp_tools_as_langchain
 
-# Set up logging with more detail
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stdout
-)
-logger = logging.getLogger(__name__)
+# Set up logging
+logger = configure_basic_logging(name=__name__)
 
 
 class PrologAgent:

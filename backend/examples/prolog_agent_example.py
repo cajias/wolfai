@@ -13,13 +13,15 @@ Key functionalities:
 """
 
 import asyncio
-import os
 import logging
+import os
 import sys
+
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
+from langchain_openai import ChatOpenAI
 from mcp import StdioServerParameters
+
 from wolfai.agents import PrologAgent
 
 # Configure logging to track execution details

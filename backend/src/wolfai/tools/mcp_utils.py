@@ -2,8 +2,8 @@
 import inspect
 import typing
 from dataclasses import dataclass
-from datetime import datetime, date
-from typing import Any, Callable, Dict, List, Optional, get_origin, get_args
+from datetime import date, datetime
+from typing import Any, Callable, Dict, List, Optional, get_args, get_origin
 
 import docstring_parser
 from mcp import types
@@ -18,6 +18,25 @@ class MCPPrompt:
     description: str
     arguments: List[types.PromptArgument]
     messages: List[types.PromptMessage]
+
+
+def create_text_message(role: str, text: str) -> types.PromptMessage:
+    """Create a PromptMessage with text content.
+
+    Args:
+        role: Message role ("user", "assistant", or "system")
+        text: Text content of the message
+
+    Returns:
+        PromptMessage with TextContent
+    """
+    return types.PromptMessage(
+        role=role,
+        content=types.TextContent(
+            type="text",
+            text=text
+        )
+    )
 
 
 def generate_example_value(annotation: Any) -> Any:

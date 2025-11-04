@@ -3,6 +3,7 @@
 import click
 
 from wolfai.tools import mcp_server_factory
+
 from . import prolog
 
 

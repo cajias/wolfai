@@ -1,5 +1,5 @@
+from ...gamelib import Actor, Event
 from .simple_env import SimpleEnvironment
-from ...gamelib import Event, Actor
 
 
 class SimpleActor(Actor):

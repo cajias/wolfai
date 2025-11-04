@@ -36,7 +36,8 @@ dev = [
     "mypy",  # linting
     "pytest",  # testing
     "pytest-asyncio",  # async testing
-    "ruff"  # linting
+    "ruff",  # linting
+    "pylint"  # duplicate code detection
 ]
 
 [project.urls]
@@ -97,15 +98,18 @@ markers = [
 ]
 
 [tool.ruff]
+line-length = 100
 
 [tool.ruff.lint]
-# Enable additional lint rules to flag complexity, long functions, and duplication.
-select = ["E", "F", "B", "C90", "PLR", "SIM"]
+# Enable comprehensive linting rules
+select = ["E", "F", "I", "B", "W", "C90", "PLR", "SIM"]
 
-# Never enforce `E501` (line length violations).
-ignore = ["E501"]
+# Only ignore rules that genuinely conflict with Black or are false positives
+ignore = [
+    "E501",  # Line too long (let Black handle this)
+]
 
-# Avoid trying to fix flake8-bugbear (`B`) violations.
+# Avoid trying to fix flake8-bugbear (`B`) violations automatically
 unfixable = ["B"]
 
 [tool.ruff.lint.mccabe]
@@ -113,14 +117,13 @@ unfixable = ["B"]
 max-complexity = 10
 
 [tool.ruff.lint.pylint]
-# Warn on excessively long or complex functions.
+# Enforce reasonable function complexity limits
 max-args = 5
 max-branches = 12
 max-returns = 6
 max-statements = 50
 
-# Ignore `E402` (import violations) in all `__init__.py` files and
-# relax magic-number checks in tests.
+# Ignore `E402` (import violations) in all `__init__.py` files
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402"]
-"tests/**" = ["PLR2004"]
+"tests/**" = ["B008", "PLR2004"]  # Allow magic values in tests

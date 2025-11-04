@@ -1,10 +1,12 @@
 import asyncio
 import logging
-from typing import Type, Any, Dict
+from typing import Any, Dict, Type
 
 from langchain_core.tools import StructuredTool
-from mcp import ClientSession, types as mcp_types
+from mcp import ClientSession
+from mcp import types as mcp_types
 from pydantic import BaseModel, create_model
+
 
 class RunQueryInput(BaseModel):
     """Schema for run_query tool input."""

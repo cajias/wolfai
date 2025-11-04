@@ -4,5 +4,12 @@
   "workspaces": [
     "frontend",
     "backend"
-  ]
+  ],
+  "scripts": {
+    "lint:py": "npm run lint:py:ruff && npm run lint:py:dupes",
+    "lint:py:ruff": "cd backend && poetry run ruff check src/ tests/",
+    "lint:py:dupes": "cd backend && poetry run pylint --rcfile=.pylintrc src/ tests/",
+    "lint:py:fix": "bash scripts/fix-python-issues.sh",
+    "test:py": "cd backend && poetry run pytest"
+  }
 }

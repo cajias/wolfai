@@ -1,11 +1,11 @@
 import asyncio
-import logging
 import os
-import sys
-import subprocess
-import threading
 import queue
+import subprocess
+import sys
+import threading
 import traceback
+
 import pytest
 
 # Skip entire module if SWI-Prolog is not available
@@ -15,19 +15,14 @@ except Exception:
     pytest.skip("SWI-Prolog not available", allow_module_level=True)
 
 from dotenv import load_dotenv
-
 from langchain_openai import ChatOpenAI
 from mcp import StdioServerParameters
 
 from wolfai.agents import PrologAgent
+from wolfai.logging import configure_basic_logging
 
 # Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stdout
-)
-logger = logging.getLogger(__name__)
+logger = configure_basic_logging(name=__name__)
 
 def capture_process_output(process, output_queue):
     """Capture and log process output in real-time."""

@@ -1,15 +1,17 @@
 """Tests for MCP utility functions that generate tools from Python code."""
 
 import inspect
-from typing import List, Optional, Dict, Any
-from datetime import datetime, date
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional
+
 import pytest
+
 from wolfai.tools.mcp_utils import (
     function_to_mcp_tool,
+    generate_example_value,
     generate_tools_from_module,
     get_parameter_schema,
     get_type_validation_rules,
-    generate_example_value
 )
 
 
