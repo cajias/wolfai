@@ -9,7 +9,6 @@ from mcp.server.lowlevel import Server
 
 from wolfai.tools.mcp_utils import generate_from_module
 
-
 PAIR_LENGTH = 2
 
 

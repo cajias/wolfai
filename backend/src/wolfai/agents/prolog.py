@@ -7,8 +7,7 @@ from typing import List, Optional
 # TODO: Fix deprecated import - initialize_agent and AgentType are deprecated in LangChain 1.0+
 # from langchain.agents import initialize_agent, AgentType
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import BaseMessage
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client

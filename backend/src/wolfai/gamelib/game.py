@@ -1,6 +1,7 @@
 """Game state management interface."""
 
 from typing import Protocol, Set, TypeVar
+
 from .types import Event
 
 GameStateType = TypeVar('GameStateType')

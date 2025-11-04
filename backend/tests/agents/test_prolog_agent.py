@@ -1,11 +1,12 @@
 import asyncio
 import logging
 import os
-import sys
-import subprocess
-import threading
 import queue
+import subprocess
+import sys
+import threading
 import traceback
+
 import pytest
 
 # Skip entire module if SWI-Prolog is not available
@@ -15,7 +16,6 @@ except Exception:
     pytest.skip("SWI-Prolog not available", allow_module_level=True)
 
 from dotenv import load_dotenv
-
 from langchain_openai import ChatOpenAI
 from mcp import StdioServerParameters
 

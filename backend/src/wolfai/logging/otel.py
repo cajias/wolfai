@@ -3,9 +3,7 @@
 import contextlib
 import logging
 import os
-from typing import (
-    TypeVar
-)
+from typing import TypeVar
 
 # OpenTelemetry imports
 try:

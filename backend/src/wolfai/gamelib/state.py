@@ -1,6 +1,6 @@
 """State observation interface."""
 
-from typing import Protocol, Dict, Set, Any, TypeVar
+from typing import Any, Dict, Protocol, Set, TypeVar
 
 GameStateType = TypeVar('GameStateType')
 

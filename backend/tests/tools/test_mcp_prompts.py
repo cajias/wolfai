@@ -1,13 +1,14 @@
 """Tests for MCP prompt functionality in mcp_utils."""
 
-from mcp import types
 import pytest
+from mcp import types
+
 from wolfai.tools.mcp_utils import (
     MCPPrompt,
-    prompt,
     function_to_mcp_prompt,
+    generate_from_module,
     generate_prompts_from_module,
-    generate_from_module
+    prompt,
 )
 
 

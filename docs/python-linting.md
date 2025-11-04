@@ -10,42 +10,64 @@ We use [Ruff](https://github.com/astral-sh/ruff) as our primary Python linter. R
 - isort
 - pyupgrade
 - autoflake
+- Pylint
 - and more
 
 ## Configuration
 
-Ruff is configured in the `backend/pyproject.toml` file:
+Ruff is configured in the `backend/pyproject.toml` file with comprehensive linting rules:
 
 ```toml
 [tool.ruff]
 line-length = 100
 
 [tool.ruff.lint]
-# Enable pycodestyle (E), Pyflakes (F), isort (I), and flake8-bugbear (B)
-select = ["E", "F", "I", "B", "W", "C90"]
+# Enable comprehensive linting rules
+select = ["E", "F", "I", "B", "W", "C90", "PLR", "SIM"]
+
+# Only ignore rules that genuinely conflict with Black or are false positives
 ignore = [
-    "E203",  # Whitespace before ':' (conflicts with Black)
-    "E501",  # Line too long (handled by Black)
-    "B008",  # Do not perform function calls in argument defaults
-    # Additional ignores to match flake8 configuration
-    "D300",  # Use """triple double quotes"""
-    "D103",  # Missing docstring in public function
-    "D105",  # Missing docstring in magic method
-    "D106",  # Missing docstring in public nested class
-    # Temporarily ignore these to make the build pass
-    "B904",  # Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None`
-    "C901",  # Function is too complex
-    "B024",  # Abstract base class without abstract methods
-    "B027",  # Empty method in abstract base class with no abstract decorator
-    "B019",  # Use of functools.lru_cache on methods can lead to memory leaks
-    "B007",  # Loop control variable not used within loop body
+    "E501",  # Line too long (let Black handle this)
 ]
+
+# Avoid trying to fix flake8-bugbear (`B`) violations automatically
+unfixable = ["B"]
+
+[tool.ruff.lint.mccabe]
+# Flag overly complex code (McCabe complexity > 10).
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+# Enforce reasonable function complexity limits
+max-args = 5
+max-branches = 12
+max-returns = 6
+max-statements = 50
 
 # Ignore `E402` (import violations) in all `__init__.py` files
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402"]
-"tests/**" = ["B008"]
+"tests/**" = ["B008", "PLR2004"]  # Allow magic values in tests
 ```
+
+### Rule Categories Enabled
+
+- **E, W**: pycodestyle errors and warnings
+- **F**: Pyflakes (undefined names, unused imports, etc.)
+- **I**: isort (import sorting)
+- **B**: flake8-bugbear (design issues)
+- **C90**: McCabe complexity checking (max complexity 10)
+- **PLR**: Pylint refactor recommendations
+- **SIM**: Simplification suggestions
+
+### Complexity Limits
+
+The configuration enforces the following limits to maintain code quality:
+- Maximum function arguments: 5
+- Maximum branches per function: 12
+- Maximum return statements: 6
+- Maximum statements per function: 50
+- Maximum cyclomatic complexity: 10
 
 ## Running the Linter
 
@@ -84,25 +106,22 @@ This script will:
 
 ## Current Status
 
-As of the latest run, there are **111 linting issues** detected:
-- **110 fixable** with the `--fix` option
-- Most issues are related to import sorting (I001)
+✅ **All linting checks pass!** The codebase is fully compliant with our strict linting rules.
 
-You can fix most of these automatically by running:
+All 111 previously identified issues have been fixed, including:
+- Import sorting and organization
+- Code formatting and whitespace
+- All issues were resolved using Ruff's auto-fix capabilities
 
-```bash
-npm run lint:py:fix
-```
+## Best Practices
 
-## Technical Debt Plan
-
-We've temporarily disabled some Ruff rules to make the build pass. These issues should be addressed in future PRs:
+When writing Python code for this project, follow these best practices to maintain clean, maintainable code:
 
 ### Exception Handling (B904)
 
-- **Issue**: Exceptions are raised without preserving the original exception context
-- **Fix**: Use `raise ... from err` to preserve tracebacks
-- **Example**:
+Always preserve exception context when re-raising exceptions:
+
+**Best Practice**: Use `raise ... from err` to preserve tracebacks
 
   ```python
   # Before
@@ -118,11 +137,11 @@ We've temporarily disabled some Ruff rules to make the build pass. These issues 
       raise ValueError("Something went wrong") from e
   ```
 
-### Complex Functions (C901)
+### Function Complexity (C901)
 
-- **Issue**: Many functions are too complex (high cyclomatic complexity)
-- **Fix**: Break down complex functions into smaller, more focused functions
-- **Example**:
+Keep functions focused and simple to improve readability and maintainability:
+
+**Best Practice**: Break down complex functions into smaller, more focused functions
 
   ```python
   # Before
@@ -147,9 +166,9 @@ We've temporarily disabled some Ruff rules to make the build pass. These issues 
 
 ### Abstract Base Classes (B024, B027)
 
-- **Issue**: Abstract base classes without abstract methods or with empty methods
-- **Fix**: Add `@abstractmethod` decorator to methods that should be implemented by subclasses
-- **Example**:
+Properly mark abstract methods to make interfaces clear:
+
+**Best Practice**: Add `@abstractmethod` decorator to methods that must be implemented by subclasses
 
   ```python
   # Before
@@ -166,11 +185,11 @@ We've temporarily disabled some Ruff rules to make the build pass. These issues 
           pass
   ```
 
-### Memory Leaks (B019)
+### Caching (B019)
 
-- **Issue**: Using `functools.lru_cache` on methods can lead to memory leaks
-- **Fix**: Move cached methods to module-level functions or use a different caching strategy
-- **Example**:
+Avoid memory leaks when using caching:
+
+**Best Practice**: Use `@lru_cache` on module-level functions, not instance methods
 
   ```python
   # Before

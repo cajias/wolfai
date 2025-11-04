@@ -1,6 +1,6 @@
 """Environment interface for managing events and actor interactions."""
 
-from typing import Protocol, List, TypeVar
+from typing import List, Protocol, TypeVar
 
 from .types import Event
 

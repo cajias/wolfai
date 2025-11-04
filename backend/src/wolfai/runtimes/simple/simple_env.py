@@ -2,7 +2,8 @@ import asyncio
 from typing import List
 
 from src.wolfai.runtimes.simple import SimpleActor
-from ...gamelib import Actor, Event, Environment
+
+from ...gamelib import Actor, Environment, Event
 
 
 class SimpleEnvironment(Environment):

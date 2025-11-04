@@ -3,12 +3,13 @@
 # Default import mechanism with graceful fallback
 try:
     from .otel import (
-        setup_otel_logging,
-        otel_log_call,
         ObservabilityConfig,
         OpenTelemetryConfig,
-        OTelOperationTimer, getLogger
-)
+        OTelOperationTimer,
+        getLogger,
+        otel_log_call,
+        setup_otel_logging,
+    )
 except ImportError as e:
     import logging
     logging.warning(f"OpenTelemetry logging import failed: {e}")

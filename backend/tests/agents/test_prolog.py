@@ -8,8 +8,10 @@ try:
 except Exception:
     pytest.skip("SWI-Prolog not available", allow_module_level=True)
 
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock, Mock
+
 from mcp import ClientSession
+
 from wolfai.agents.prolog import PrologAgent
 
 
