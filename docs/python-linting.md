@@ -118,27 +118,28 @@ This configuration:
 You can run the linter using the following commands:
 
 ```bash
-# Run Ruff on the entire project (from root directory)
+# Run ALL linters (Ruff + duplicate detection) - RECOMMENDED
 npm run lint:py
 
-# Check for duplicate code blocks
+# Run only Ruff linter
+npm run lint:py:ruff
+
+# Run only duplicate code detection
 npm run lint:py:dupes
 
-# Run Ruff directly in the backend directory
-cd backend
-python3 -m ruff check src/ tests/
-
-# Run duplicate detection directly
-cd backend
-python3 -m pylint --rcfile=.pylintrc src/ tests/
-
 # Fix automatically fixable issues
-python3 -m ruff check --fix src/ tests/
-
-# Run the automated fix script
 npm run lint:py:fix
 # or
 ./scripts/fix-python-issues.sh
+
+# Run linters directly in the backend directory (without npm)
+cd backend
+python3 -m ruff check src/ tests/
+python3 -m pylint --rcfile=.pylintrc src/ tests/
+
+# Fix issues directly
+cd backend
+python3 -m ruff check --fix src/ tests/
 ```
 
 ## Fixing Issues
@@ -282,8 +283,9 @@ Ruff should be integrated into the CI pipeline to run automatically on all pull 
 
 ## Available Scripts
 
-- `npm run lint:py` - Run Ruff linter on Python code
-- `npm run lint:py:dupes` - Check for duplicate code blocks
+- `npm run lint:py` - Run ALL linters (Ruff + duplicate detection) ⭐ **RECOMMENDED**
+- `npm run lint:py:ruff` - Run only Ruff linter
+- `npm run lint:py:dupes` - Run only duplicate code detection
 - `npm run lint:py:fix` - Auto-fix linting issues
 - `npm run test:py` - Run Python tests
 
