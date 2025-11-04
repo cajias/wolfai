@@ -5,6 +5,7 @@ from mcp import types
 
 from wolfai.tools.mcp_utils import (
     MCPPrompt,
+    create_text_message,
     function_to_mcp_prompt,
     generate_from_module,
     generate_prompts_from_module,
@@ -24,15 +25,7 @@ def create_test_prompt() -> MCPPrompt:
                 required=True
             )
         ],
-        messages=[
-            types.PromptMessage(
-                role="assistant",
-                content=types.TextContent(
-                    type="text",
-                    text="Test message"
-                )
-            )
-        ]
+        messages=[create_text_message("assistant", "Test message")]
     )
 
 
@@ -210,15 +203,7 @@ class TestErrorHandling:
                 name="test",
                 description="test",
                 arguments=[],
-                messages=[
-                    types.PromptMessage(
-                        role="assistant",
-                        content=types.TextContent(
-                            type="text",
-                            text="test"
-                        )
-                    )
-                ]
+                messages=[create_text_message("assistant", "test")]
             )
 
         prompt_obj = test_prompt()

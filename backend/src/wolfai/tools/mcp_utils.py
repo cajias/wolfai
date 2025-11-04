@@ -20,6 +20,25 @@ class MCPPrompt:
     messages: List[types.PromptMessage]
 
 
+def create_text_message(role: str, text: str) -> types.PromptMessage:
+    """Create a PromptMessage with text content.
+
+    Args:
+        role: Message role ("user", "assistant", or "system")
+        text: Text content of the message
+
+    Returns:
+        PromptMessage with TextContent
+    """
+    return types.PromptMessage(
+        role=role,
+        content=types.TextContent(
+            type="text",
+            text=text
+        )
+    )
+
+
 def generate_example_value(annotation: Any) -> Any:
     """Generate a representative example value for a type."""
     if get_origin(annotation) is typing.Union and type(None) in get_args(annotation):

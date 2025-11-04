@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 import queue
 import subprocess
@@ -20,14 +19,10 @@ from langchain_openai import ChatOpenAI
 from mcp import StdioServerParameters
 
 from wolfai.agents import PrologAgent
+from wolfai.logging import configure_basic_logging
 
 # Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    stream=sys.stdout
-)
-logger = logging.getLogger(__name__)
+logger = configure_basic_logging(name=__name__)
 
 def capture_process_output(process, output_queue):
     """Capture and log process output in real-time."""

@@ -6,6 +6,8 @@ from typing import Any, Dict, List, Optional
 import pytest
 from mcp import types
 
+from wolfai.tools.mcp_utils import create_text_message
+
 
 @dataclass
 class MockPromptResult:
@@ -120,15 +122,7 @@ class MockMCPSession:
         prolog_code = mappings.get(question, "error('Unknown question').")
 
         return MockPromptResult(
-            messages=[
-                types.PromptMessage(
-                    role="assistant",
-                    content=types.TextContent(
-                        type="text",
-                        text=prolog_code
-                    )
-                )
-            ]
+            messages=[create_text_message("assistant", prolog_code)]
         )
 
     async def _mock_prolog_chain(self, arguments: Dict[str, Any]) -> MockPromptResult:
@@ -194,15 +188,7 @@ class MockMCPSession:
         )
 
         return MockPromptResult(
-            messages=[
-                types.PromptMessage(
-                    role="assistant",
-                    content=types.TextContent(
-                        type="text",
-                        text=interpretation
-                    )
-                )
-            ]
+            messages=[create_text_message("assistant", interpretation)]
         )
 
     # Mock handlers for tools
