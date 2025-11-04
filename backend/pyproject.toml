@@ -95,6 +95,8 @@ markers = [
     "integration: marks integration tests",
     "gamelib: marks gamelib related tests",
     "asyncio: marks tests that require asyncio",
+    "e2e: marks end-to-end tests",
+    "bdd: marks BDD/Cucumber tests",
 ]
 
 [tool.ruff]
