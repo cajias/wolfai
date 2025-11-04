@@ -1,6 +1,8 @@
 """Test just the Prolog MCP server."""
 import asyncio
+
 from src.wolfai.tools.pl.prolog_mcp_server import create_prolog_server
+
 
 async def test_server():
     print("Creating Prolog server...")
