@@ -7,11 +7,11 @@ This module implements all step definitions for the werewolf game feature files.
 from __future__ import annotations
 
 import asyncio
-import time
-from typing import Any, Dict, List
+from contextlib import suppress
+from typing import Any, Dict
 
 import pytest
-from httpx import AsyncClient, Response
+from httpx import AsyncClient
 from pytest_bdd import given, parsers, scenarios, then, when
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
@@ -360,7 +360,7 @@ def end_game(client: TestClient, context: Dict[str, Any]) -> None:
 def end_first_game(client: TestClient, context: Dict[str, Any]) -> None:
     """End the first game in the list."""
     game_id = context["game_ids"][0]
-    response = client.post("/end-game", json={"game_id": game_id})
+    client.post("/end-game", json={"game_id": game_id})
     context["ended_game_id"] = game_id
     context["game_ids"].remove(game_id)
 
@@ -482,11 +482,9 @@ def disconnect_websocket(context: Dict[str, Any]) -> None:
     """Disconnect the current WebSocket."""
     ws = context.get("current_ws")
     if ws:
-        try:
+        # TestClient WebSocket may not support portal
+        with suppress(AttributeError):
             ws.close(code=1000)
-        except AttributeError:
-            # TestClient WebSocket may not support portal
-            pass
 
 
 @when("I try to connect to WebSocket for a non-existent game")
@@ -819,7 +817,7 @@ def all_clients_receive_update(context: Dict[str, Any], count: int) -> None:
             data = ws.receive_json()
             assert data is not None
         except Exception:
-            pytest.fail(f"Client did not receive update")
+            pytest.fail("Client did not receive update")
 
 
 @then("each client should receive identical state information")
