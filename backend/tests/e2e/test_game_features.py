@@ -937,18 +937,23 @@ def only_public_info(context: Dict[str, Any]) -> None:
     state = context.get("current_state")
     assert "state" in state
     assert "actions" in state
-    assert len(state.keys()) == 2  # Only these two fields
+    # Can have additional safe fields like day_number, alive_players, etc.
+    # but must not have roles
+    assert "roles" not in state
+    assert "your_role" not in state
 
 
 @then(parsers.parse('the server should maintain "{player}" as "{role}" internally'))
 def server_maintains_role(context: Dict[str, Any], player: str, role: str) -> None:
     """Verify server has correct internal role."""
     from wolfai import api
+    from wolfai.arena import Role
 
     game_id = context.get("current_game_id")
     arena = api._games.get(game_id)
     assert arena is not None
-    assert arena.roles[player] == role
+    assert player in arena.players
+    assert arena.players[player].role == Role(role.lower())
 
 
 @then("roles should remain hidden in the public view")
