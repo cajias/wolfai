@@ -36,6 +36,7 @@ dev = [
     "mypy",  # linting
     "pytest",  # testing
     "pytest-asyncio",  # async testing
+    "pytest-bdd",  # BDD/Cucumber testing
     "ruff",  # linting
     "pylint"  # duplicate code detection
 ]
@@ -95,6 +96,8 @@ markers = [
     "integration: marks integration tests",
     "gamelib: marks gamelib related tests",
     "asyncio: marks tests that require asyncio",
+    "e2e: marks end-to-end tests",
+    "bdd: marks BDD/Cucumber tests",
 ]
 
 [tool.ruff]
