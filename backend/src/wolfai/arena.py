@@ -111,7 +111,7 @@ class Arena:
         self.day_number = 1
         self.actions.append("Game started - Night 1 begins")
 
-    def apply_action(self, actor_id: str, action: str) -> None:
+    def apply_action(self, actor_id: str, action: str) -> None:  # noqa: C901, PLR0912
         """Process a game action from a player.
 
         Actions can be:
@@ -163,7 +163,7 @@ class Arena:
             # Default: just record the action
             self.actions.append(action)
 
-    def _handle_night_action(self, actor_id: str, action: str) -> None:
+    def _handle_night_action(self, actor_id: str, action: str) -> None:  # noqa: C901
         """Handle night phase actions."""
         if actor_id not in self.players:
             raise ValueError(f"Unknown player: {actor_id}")
@@ -235,7 +235,7 @@ class Arena:
 
     def advance_phase(self) -> None:
         """Advance to the next game phase."""
-        if self.phase == Phase.INITIALIZED or self.phase == Phase.UPDATED:
+        if self.phase in (Phase.INITIALIZED, Phase.UPDATED):
             self.start_game()
         elif self.phase == Phase.NIGHT:
             self._resolve_night()
@@ -409,7 +409,7 @@ class Arena:
 
         return view
 
-    def get_valid_actions(self, player_id: str) -> List[str]:
+    def get_valid_actions(self, player_id: str) -> List[str]:  # noqa: C901
         """Return list of valid actions for a player in the current phase."""
         if player_id not in self.players:
             return []

@@ -1,10 +1,7 @@
 """Async WebSocket tests using TestClient with async context."""
 
-import asyncio
-import json
 from typing import Any, Dict, List
 
-import pytest
 from fastapi.testclient import TestClient
 
 from wolfai.api import app
