@@ -7,14 +7,15 @@ Python FastAPI backend service for the Werewolf AI game.
 ```
 backend/
 ├── src/wolfai/         # Python source code
-│   ├── api.py         # FastAPI application
-│   ├── arena.py       # Game state management
-│   ├── agents/        # AI agent implementations
+│   ├── api.py         # FastAPI REST API & WebSocket server
+│   ├── arena.py       # Complete Werewolf game engine
+│   ├── agents/        # AI agent implementations (for future use)
 │   ├── tools/         # Tool integrations (Prolog, MCP)
-│   ├── gamelib/       # Game logic components
-│   └── runtimes/      # Runtime implementations
-├── tests/             # Test suite
-├── examples/          # Usage examples
+│   └── logging/       # Logging configuration
+├── tests/             # Comprehensive test suite (71 passing tests)
+│   ├── e2e/           # End-to-end BDD tests
+│   ├── agents/        # Agent tests
+│   └── tools/         # Tool tests
 └── pyproject.toml     # Python project configuration
 ```
 

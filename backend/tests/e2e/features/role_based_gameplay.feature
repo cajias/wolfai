@@ -16,20 +16,22 @@ Feature: Role-Based Gameplay
 
   Scenario: Game phases transition correctly
     Given the game phase is "initialized"
-    When I submit action "night_phase_start" by player "player1"
-    Then the game phase should be "updated"
+    When I submit action "start_game" by player "player1"
+    Then the game phase should be "night"
     When I get the game state
-    Then the phase should be "updated"
+    Then the phase should be "night"
 
   Scenario: Actions don't reveal actor identity
-    When I submit action "anonymous_vote" by player "player1"
+    When I submit action "test_action" by player "player1"
     And I get the game state
-    Then the actions list should contain "anonymous_vote"
+    Then the actions list should contain "test_action"
     But the actions list should not reveal which player acted
 
   Scenario: Multiple players with different roles
     # Default game has player1=villager, player2=werewolf
-    When I submit action "player1_speaks" by player "player1"
+    When I submit action "start_game" by player "player1"
+    And I submit action "advance_phase" by player "player1"
+    And I submit action "player1_speaks" by player "player1"
     And I submit action "player2_speaks" by player "player2"
     Then both actions should be recorded
     And roles should remain hidden in the public view
@@ -38,11 +40,11 @@ Feature: Role-Based Gameplay
     Given the game is in "initialized" phase
     When I simulate a complete game day with the following actions:
       | actor_id | action                | expected_phase |
-      | player1  | day_discussion_start  | updated        |
-      | player2  | responds              | updated        |
-      | player1  | votes_to_eliminate    | updated        |
-      | player2  | counter_votes         | updated        |
-      | player1  | night_action          | updated        |
+      | player1  | start_game            | night          |
+      | player2  | advance_phase         | day            |
+      | player1  | advance_phase         | voting         |
+      | player2  | advance_phase         | resolution     |
+      | player1  | advance_phase         | night          |
     Then all actions should be recorded in order
     And the game should maintain state consistency
     And roles should never be exposed through the API
