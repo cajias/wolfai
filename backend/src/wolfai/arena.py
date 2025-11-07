@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 # Game configuration constants
 MIN_PLAYERS = 2
@@ -140,8 +140,6 @@ class Arena:
             else:
                 # Just record it
                 self.actions.append(action)
-                if self.phase == Phase.INITIALIZED:
-                    self.phase = Phase(self.phase.value)  # Keep phase but mark as updated
         elif self.phase == Phase.VOTING:
             # Try to handle as vote, otherwise record as discussion
             if action.startswith("vote:"):
@@ -362,7 +360,7 @@ class Arena:
 
         return False
 
-    def public_view(self) -> Dict:
+    def public_view(self) -> Dict[str, Any]:
         """Return data safe for public consumption.
 
         This hides player roles and returns only publicly visible information.
@@ -380,7 +378,7 @@ class Arena:
             "player_count": len(self.players),
         }
 
-    def get_player_view(self, player_id: str) -> Dict:
+    def get_player_view(self, player_id: str) -> Dict[str, Any]:
         """Return what a specific player can see.
 
         Includes their role, investigation results (if seer), etc.
