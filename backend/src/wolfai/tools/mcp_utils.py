@@ -307,7 +307,7 @@ def function_to_mcp_prompt(func: Callable) -> types.Prompt:
     )
 
 
-def prompt(func: Optional[Callable] = None, *, name: Optional[str] = None):
+def prompt(func: Optional[Callable] = None, *, name: Optional[str] = None) -> Callable:
     """Decorator to mark and configure functions as MCP prompts.
 
     Can be used as @prompt or @prompt(name="custom_name")
@@ -323,7 +323,7 @@ def prompt(func: Optional[Callable] = None, *, name: Optional[str] = None):
         return decorator
     return decorator(func)
 
-def tool(func: Optional[Callable] = None, *, name: Optional[str] = None):
+def tool(func: Optional[Callable] = None, *, name: Optional[str] = None) -> Callable:
     """Decorator to mark and configure functions as MCP tool.
 
     Can be used as @tool or @prompt(name="custom_name")
@@ -374,14 +374,14 @@ def generate_prompts_from_module(
     return prompts
 
 
-def is_mp_prompt_type(obj):
+def is_mp_prompt_type(obj: Any) -> bool:
     return (
         hasattr(obj, "_is_mcp_prompt") or
         (inspect.isfunction(obj) and
          obj.__annotations__.get("return") == MCPPrompt)
     )
 
-def is_mp_tool_type(obj):
+def is_mp_tool_type(obj: Any) -> bool:
     return (
         hasattr(obj, "_is_mcp_tool") or
         (inspect.isfunction(obj) and obj.__annotations__.get("return") != MCPPrompt)

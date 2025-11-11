@@ -140,7 +140,7 @@ def run_server(
 
         sse = SseServerTransport("/messages/")
 
-        async def handle_sse(request) -> None:
+        async def handle_sse(request: Any) -> None:
             async with sse.connect_sse(
                 request.scope, request.receive, request._send,
             ) as streams:

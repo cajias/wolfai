@@ -1,12 +1,15 @@
 """Agents package for Wolf AI."""
 
+from typing import Any
+
+
 # Lazy import to avoid loading deprecated LangChain dependencies
 # Import PrologAgent directly when needed: from wolfai.agents.prolog import PrologAgent
 
 __all__ = ["PrologAgent"]
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> Any:
     """Lazy import for agents to avoid loading deprecated dependencies."""
     if name == "PrologAgent":
         from .prolog import PrologAgent

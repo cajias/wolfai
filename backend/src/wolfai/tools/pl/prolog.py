@@ -18,6 +18,7 @@ Key features:
 
 import contextlib
 import uuid
+from collections.abc import Generator
 from dataclasses import dataclass
 from typing import Any, Optional
 
@@ -61,7 +62,7 @@ class PrologResult:
 
 
 @contextlib.contextmanager
-def _temporary_prolog_env():
+def _temporary_prolog_env() -> Generator[tuple[Prolog, str], None, None]:
     """Create an isolated Prolog environment for safe query execution.
 
     This context manager ensures that each query execution happens in a fresh,
