@@ -37,8 +37,11 @@ dev = [
     "pytest",  # testing
     "pytest-asyncio",  # async testing
     "pytest-bdd",  # BDD/Cucumber testing
+    "pytest-cov",  # coverage reporting
     "ruff",  # linting
-    "pylint"  # duplicate code detection
+    "pylint",  # duplicate code detection
+    "black",  # code formatting
+    "agentic-guardrails @ git+https://github.com/cajias/lint-configs.git@v1.0.0#subdirectory=python",  # lint configs
 ]
 
 [project.urls]
@@ -52,22 +55,11 @@ package-dir = {"" = "src"}
 [tool.setuptools.package-data]
 "*" = ["*.*"]
 
-# Mypy
-# ----
-
-[tool.mypy]
-files = "."
-
-# Use strict defaults
-strict = true
-warn_unreachable = true
-warn_no_return = true
-
-[[tool.mypy.overrides]]
-# Don't require test functions to include types
-module = "tests.*"
-allow_untyped_defs = true
-disable_error_code = "attr-defined"
+# Lint Configurations
+# -------------------
+# Using strict configurations from agentic-guardrails package
+# Source: https://github.com/cajias/lint-configs v1.0.0
+# Installed via: pip install "agentic-guardrails @ git+https://github.com/cajias/lint-configs.git@v1.0.0#subdirectory=python"
 
 # Pytest
 # ------
@@ -100,33 +92,90 @@ markers = [
     "bdd: marks BDD/Cucumber tests",
 ]
 
+# Ruff - Extend from agentic-guardrails package config
 [tool.ruff]
-line-length = 100
+extend = "python/pyproject-linters.toml"  # From agentic-guardrails package
+target-version = "py311"  # Override for this project
 
-[tool.ruff.lint]
-# Enable comprehensive linting rules
-select = ["E", "F", "I", "B", "W", "C90", "PLR", "SIM"]
-
-# Only ignore rules that genuinely conflict with Black or are false positives
-ignore = [
-    "E501",  # Line too long (let Black handle this)
-]
-
-# Avoid trying to fix flake8-bugbear (`B`) violations automatically
-unfixable = ["B"]
-
-[tool.ruff.lint.mccabe]
-# Flag overly complex code (McCabe complexity > 10).
-max-complexity = 10
-
-[tool.ruff.lint.pylint]
-# Enforce reasonable function complexity limits
-max-args = 5
-max-branches = 12
-max-returns = 6
-max-statements = 50
-
-# Ignore `E402` (import violations) in all `__init__.py` files
+# Project-specific per-file ignores
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402"]
-"tests/**" = ["B008", "PLR2004"]  # Allow magic values in tests
+
+# Black - Extend from canonical config
+[tool.black]
+extend-config = "pyproject-linters.toml"
+target-version = ["py311", "py312"]
+
+# MyPy - Extend from canonical config
+[tool.mypy]
+python_version = "3.11"
+files = "."
+
+# Import base strict settings from pyproject-linters.toml
+strict = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_unreachable = true
+warn_no_return = true
+strict_equality = true
+
+# Project-specific overrides
+[[tool.mypy.overrides]]
+module = "tests.*"
+allow_untyped_defs = true
+disable_error_code = "attr-defined"
+
+# Pylint - Extend from canonical config
+[tool.pylint.main]
+py-version = "3.11"
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint.design]
+max-args = 5
+max-locals = 15
+max-returns = 6
+max-branches = 12
+max-statements = 50
+max-parents = 7
+max-attributes = 7
+min-public-methods = 1
+max-public-methods = 20
+
+[tool.pylint."messages control"]
+disable = [
+    "C0114",  # missing-module-docstring (handled by ruff)
+    "C0115",  # missing-class-docstring (handled by ruff)
+    "C0116",  # missing-function-docstring (handled by ruff)
+]
+
+[tool.pylint.similarities]
+min-similarity-lines = 4
+ignore-comments = true
+ignore-docstrings = true
+ignore-imports = true
+ignore-signatures = true
+
+# Coverage - Extend from canonical config
+[tool.coverage.run]
+branch = true
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+precision = 2
+show_missing = true
+skip_covered = false
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.xml]
+output = "coverage.xml"
