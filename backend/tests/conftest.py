@@ -5,7 +5,7 @@ import pytest
 def pytest_configure(config):
     """Configure pytest markers."""
     config.addinivalue_line(
-        "markers", "requires_swipl: mark test as requiring SWI-Prolog"
+        "markers", "requires_swipl: mark test as requiring SWI-Prolog",
     )
 
 

@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 import openai
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -10,6 +10,6 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
     stop=stop_after_attempt(5),  # Stop after 5 attempts
 )
 
-async def invoke_agent_with_retry(agent_executor, query)->Dict[str, Any]:
+async def invoke_agent_with_retry(agent_executor, query)->dict[str, Any]:
     """Invoke the LangChain agent with retry logic for rate limits."""
     return await agent_executor.ainvoke(query)

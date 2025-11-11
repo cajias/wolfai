@@ -55,7 +55,7 @@ def test_websocket_broadcasts_to_all_clients() -> None:
     game_id = client.post("/new-game").json()["game_id"]
 
     with client.websocket_connect(f"/ws/{game_id}") as ws1, client.websocket_connect(
-        f"/ws/{game_id}"
+        f"/ws/{game_id}",
     ) as ws2:
         client.post(
             "/action",
@@ -67,7 +67,6 @@ def test_websocket_broadcasts_to_all_clients() -> None:
 
 def test_hidden_state_not_exposed() -> None:
     """Ensure that secret server-side data stays hidden from clients."""
-
     client = TestClient(app)
 
     game_id = client.post("/new-game").json()["game_id"]
@@ -83,7 +82,6 @@ def test_hidden_state_not_exposed() -> None:
 
 def test_list_games_endpoint() -> None:
     """Games endpoint returns active game identifiers."""
-
     client = TestClient(app)
 
     _games.clear()

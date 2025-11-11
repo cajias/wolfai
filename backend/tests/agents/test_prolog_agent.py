@@ -8,6 +8,7 @@ import traceback
 
 import pytest
 
+
 # Skip entire module if SWI-Prolog is not available
 try:
     import pyswip  # noqa: F401
@@ -20,6 +21,7 @@ from mcp import StdioServerParameters
 
 from wolfai.agents import PrologAgent
 from wolfai.logging import configure_basic_logging
+
 
 # Configure logging
 logger = configure_basic_logging(name=__name__)
@@ -34,8 +36,8 @@ def capture_process_output(process, output_queue):
             output_queue.put(line)
             logger.debug(f"PROCESS OUTPUT: {line}")
     except Exception as e:
-        logger.error(f"Process output capture error: {e}")
-        logger.error(traceback.format_exc())
+        logger.exception(f"Process output capture error: {e}")
+        logger.exception(traceback.format_exc())
     finally:
         process.stdout.close()
 
@@ -55,7 +57,7 @@ async def test_prolog_agent_initialization(tmp_path):
     # Start the Prolog MCP server as a subprocess with detailed logging
     server_command = [
         sys.executable,
-        "-m", "wolfai.tools.pl.prolog_mcp_server"
+        "-m", "wolfai.tools.pl.prolog_mcp_server",
     ]
 
     server_process = subprocess.Popen(
@@ -63,13 +65,13 @@ async def test_prolog_agent_initialization(tmp_path):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         bufsize=1,
-        text=True  # Ensures output is read as text
+        text=True,  # Ensures output is read as text
     )
 
     # Thread to capture process output
     output_thread = threading.Thread(
         target=capture_process_output,
-        args=(server_process, output_queue)
+        args=(server_process, output_queue),
     )
     output_thread.start()
 
@@ -77,7 +79,7 @@ async def test_prolog_agent_initialization(tmp_path):
     server_params = StdioServerParameters(
         command=sys.executable,
         args=["-m", "wolfai.tools.pl.prolog_mcp_server"],
-        env=dict(os.environ)
+        env=dict(os.environ),
     )
 
     try:
@@ -87,9 +89,9 @@ async def test_prolog_agent_initialization(tmp_path):
                     api_key=os.environ.get("OPENAI_API_KEY"),
                     model="gpt-3.5-turbo",
                     timeout=30.0,
-                    max_retries=1
+                    max_retries=1,
                 ),
-                server_params
+                server_params,
             )
         await asyncio.wait_for(agent.initialize(),timeout=2000.0)
 
@@ -101,34 +103,34 @@ async def test_prolog_agent_initialization(tmp_path):
 
     except asyncio.TimeoutError:
         # Capture and log all process output on timeout
-        logger.error("Agent initialization timed out")
-        logger.error("Process Output Log:")
+        logger.exception("Agent initialization timed out")
+        logger.exception("Process Output Log:")
         while not output_queue.empty():
             log_line = output_queue.get()
-            logger.error(log_line)
+            logger.exception(log_line)
 
         # Write process output to debug log file
-        with open(log_file, 'w') as f:
+        with open(log_file, "w") as f:
             while not output_queue.empty():
                 f.write(output_queue.get() + "\n")
 
         pytest.fail(f"Agent initialization timed out. See debug log: {log_file}")
 
     except Exception as e:
-        logger.error(f"Unexpected error during agent initialization: {e}")
-        logger.error(traceback.format_exc())
+        logger.exception(f"Unexpected error during agent initialization: {e}")
+        logger.exception(traceback.format_exc())
 
-        logger.error("Process Output Log:")
+        logger.exception("Process Output Log:")
         while not output_queue.empty():
             log_line = output_queue.get()
-            logger.error(log_line)
+            logger.exception(log_line)
 
         # Write process output to debug log file
-        with open(log_file, 'w') as f:
+        with open(log_file, "w") as f:
             while not output_queue.empty():
                 f.write(output_queue.get() + "\n")
 
-        pytest.fail(f"Prolog agent initialization failed: {str(e)}. See debug log: {log_file}")
+        pytest.fail(f"Prolog agent initialization failed: {e!s}. See debug log: {log_file}")
 
     finally:
         # Ensure process is terminated

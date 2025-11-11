@@ -97,9 +97,9 @@ markers = [
     "bdd: marks BDD/Cucumber tests",
 ]
 
-# Ruff - Extend from agentic-guardrails package config
+# Ruff - Extend from agentic-guardrails config
 [tool.ruff]
-extend = "pyproject-linters.toml"  # Downloaded from agentic-guardrails v1.0.0
+extend = "ruff.toml"  # Extracted from agentic-guardrails v1.0.0
 target-version = "py311"  # Override for this project
 
 # Project-specific per-file ignores

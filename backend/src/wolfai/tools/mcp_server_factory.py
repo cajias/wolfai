@@ -1,7 +1,7 @@
 """Factory for creating generic MCP servers from Python modules."""
 
 import inspect
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Optional
 
 import anyio
 from mcp import types
@@ -9,15 +9,15 @@ from mcp.server.lowlevel import Server
 
 from wolfai.tools.mcp_utils import generate_from_module
 
+
 PAIR_LENGTH = 2
 
 
 class ModuleServer:
     """A generic MCP server that can expose any module's functions."""
 
-    def __init__(self, module: Any, name: str, session_store: Optional[Dict] = None):
-        """
-        Initialize the server with a module to expose.
+    def __init__(self, module: Any, name: str, session_store: Optional[dict] = None) -> None:
+        """Initialize the server with a module to expose.
 
         Args:
             module: The Python module whose functions to expose
@@ -34,7 +34,7 @@ class ModuleServer:
             tool.inputSchema["properties"]["session_id"] = {
                 "type": "string",
                 "description": "Session identifier for state management",
-                "default": "default"
+                "default": "default",
             }
             self.tools.append(tool)
 
@@ -49,15 +49,14 @@ class ModuleServer:
         """Format any result into MCP text content."""
         if isinstance(result, (list, tuple)) and len(result) == PAIR_LENGTH:
             # Handle case where function returns (result, state)
-            result, state = result
+            result, _state = result
 
         if isinstance(result, types.TextContent):
             return [result]
-        elif isinstance(result, list) and all(isinstance(x, types.TextContent) for x in result):
+        if isinstance(result, list) and all(isinstance(x, types.TextContent) for x in result):
             return result
-        else:
-            # Convert any other result to string representation
-            return [types.TextContent(type="text", text=str(result))]
+        # Convert any other result to string representation
+        return [types.TextContent(type="text", text=str(result))]
 
     async def handle_tool_call(self, name: str, arguments: dict) -> list[types.TextContent]:
         """Generic handler for tool calls."""
@@ -86,7 +85,7 @@ class ModuleServer:
             return self._format_result(result)
 
         except Exception as e:
-            return [types.TextContent(type="text", text=f"Error: {str(e)}")]
+            return [types.TextContent(type="text", text=f"Error: {e!s}")]
 
     def create_server(self) -> Server:
         """Create and configure the MCP server."""
@@ -104,13 +103,12 @@ class ModuleServer:
 
 def run_server(
     module: Any,
-    name: str = None,
+    name: Optional[str] = None,
     port: int = 8000,
     transport: str = "stdio",
-    session_store: Optional[Dict] = None
+    session_store: Optional[dict] = None,
 ) -> None:
-    """
-    Run an MCP server for a module.
+    """Run an MCP server for a module.
 
     Args:
         module: The Python module to expose
@@ -128,10 +126,10 @@ def run_server(
     if transport == "stdio":
         from mcp.server.stdio import stdio_server
 
-        async def arun():
+        async def arun() -> None:
             async with stdio_server() as streams:
                 await app.run(
-                    streams[0], streams[1], app.create_initialization_options()
+                    streams[0], streams[1], app.create_initialization_options(),
                 )
 
         anyio.run(arun)
@@ -142,12 +140,12 @@ def run_server(
 
         sse = SseServerTransport("/messages/")
 
-        async def handle_sse(request):
+        async def handle_sse(request) -> None:
             async with sse.connect_sse(
-                request.scope, request.receive, request._send
+                request.scope, request.receive, request._send,
             ) as streams:
                 await app.run(
-                    streams[0], streams[1], app.create_initialization_options()
+                    streams[0], streams[1], app.create_initialization_options(),
                 )
 
         starlette_app = Starlette(

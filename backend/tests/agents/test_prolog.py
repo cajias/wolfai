@@ -2,6 +2,7 @@
 
 import pytest
 
+
 # Skip entire module if SWI-Prolog is not available
 try:
     import pyswip  # noqa: F401
@@ -48,7 +49,7 @@ def mock_session():
     session.call_tool.return_value = {
         "success": True,
         "solutions": [{}],  # Empty solution means "Yes"
-        "error": None
+        "error": None,
     }
 
     return session

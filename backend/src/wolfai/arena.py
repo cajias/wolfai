@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
+
 
 # Game configuration constants
 MIN_PLAYERS = 2
@@ -53,35 +54,35 @@ class Arena:
     """
 
     # Core game state
-    players: Dict[str, Player] = field(default_factory=dict)
+    players: dict[str, Player] = field(default_factory=dict)
     phase: Phase = Phase.INITIALIZED
     day_number: int = 0
 
     # Night actions (reset each night)
-    werewolf_targets: Set[str] = field(default_factory=set)  # Werewolves vote on target
-    seer_target: Optional[str] = None
-    doctor_target: Optional[str] = None
+    werewolf_targets: set[str] = field(default_factory=set)  # Werewolves vote on target
+    seer_target: str | None = None
+    doctor_target: str | None = None
 
     # Voting (reset each voting phase)
-    votes: Dict[str, str] = field(default_factory=dict)  # voter_id -> target_id
+    votes: dict[str, str] = field(default_factory=dict)  # voter_id -> target_id
 
     # Game history and public events
-    actions: List[str] = field(default_factory=list)
-    eliminated_players: List[str] = field(default_factory=list)
+    actions: list[str] = field(default_factory=list)
+    eliminated_players: list[str] = field(default_factory=list)
 
     # Private investigation results (seer only)
-    investigation_results: Dict[str, List[tuple[str, str]]] = field(
-        default_factory=dict
+    investigation_results: dict[str, list[tuple[str, str]]] = field(
+        default_factory=dict,
     )  # seer_id -> [(target, result), ...]
 
     # Game outcome
-    winner: Optional[str] = None  # "werewolves", "villagers", or None
+    winner: str | None = None  # "werewolves", "villagers", or None
 
     # Track which players have acted this phase
-    players_acted: Set[str] = field(default_factory=set)
+    players_acted: set[str] = field(default_factory=set)
 
     @property
-    def roles(self) -> Dict[str, str]:
+    def roles(self) -> dict[str, str]:
         """Backward compatibility property to access roles."""
         return {pid: p.role.value for pid, p in self.players.items()}
 
@@ -90,22 +91,26 @@ class Arena:
         try:
             role_enum = Role(role.lower())
         except ValueError as exc:
-            raise ValueError(f"Invalid role: {role}") from exc
+            msg = f"Invalid role: {role}"
+            raise ValueError(msg) from exc
 
         self.players[actor_id] = Player(player_id=actor_id, role=role_enum)
 
     def start_game(self) -> None:
         """Start the game and transition to first night phase."""
         if self.phase not in (Phase.INITIALIZED, Phase.UPDATED):
-            raise ValueError("Game has already started")
+            msg = "Game has already started"
+            raise ValueError(msg)
 
         if len(self.players) < MIN_PLAYERS:
-            raise ValueError(f"Need at least {MIN_PLAYERS} players to start")
+            msg = f"Need at least {MIN_PLAYERS} players to start"
+            raise ValueError(msg)
 
         # Verify we have at least one werewolf
         werewolf_count = sum(1 for p in self.players.values() if p.role == Role.WEREWOLF)
         if werewolf_count == 0:
-            raise ValueError("Game must have at least one werewolf")
+            msg = "Game must have at least one werewolf"
+            raise ValueError(msg)
 
         self.phase = Phase.NIGHT
         self.day_number = 1
@@ -121,7 +126,8 @@ class Arena:
         - Any other text: recorded as discussion/action log
         """
         if self.phase == Phase.GAME_OVER:
-            raise ValueError("Game is over")
+            msg = "Game is over"
+            raise ValueError(msg)
 
         # Handle special commands
         if action == "start_game":
@@ -164,23 +170,28 @@ class Arena:
     def _handle_night_action(self, actor_id: str, action: str) -> None:  # noqa: C901
         """Handle night phase actions."""
         if actor_id not in self.players:
-            raise ValueError(f"Unknown player: {actor_id}")
+            msg = f"Unknown player: {actor_id}"
+            raise ValueError(msg)
 
         player = self.players[actor_id]
         if not player.alive:
-            raise ValueError("Dead players cannot act")
+            msg = "Dead players cannot act"
+            raise ValueError(msg)
 
         # Parse action
         if ":" not in action:
-            raise ValueError(f"Invalid night action format: {action}")
+            msg = f"Invalid night action format: {action}"
+            raise ValueError(msg)
 
         action_type, target_id = action.split(":", 1)
 
         if target_id not in self.players:
-            raise ValueError(f"Unknown target: {target_id}")
+            msg = f"Unknown target: {target_id}"
+            raise ValueError(msg)
 
         if not self.players[target_id].alive:
-            raise ValueError(f"Cannot target dead player: {target_id}")
+            msg = f"Cannot target dead player: {target_id}"
+            raise ValueError(msg)
 
         # Process based on role
         if action_type == "kill" and player.role == Role.WEREWOLF:
@@ -189,7 +200,8 @@ class Arena:
             # Don't reveal in actions list
         elif action_type == "investigate" and player.role == Role.SEER:
             if self.seer_target is not None:
-                raise ValueError("Seer has already investigated this night")
+                msg = "Seer has already investigated this night"
+                raise ValueError(msg)
             self.seer_target = target_id
             # Store investigation result for seer
             target_role = self.players[target_id].role
@@ -200,33 +212,40 @@ class Arena:
             self.players_acted.add(actor_id)
         elif action_type == "protect" and player.role == Role.DOCTOR:
             if self.doctor_target is not None:
-                raise ValueError("Doctor has already protected this night")
+                msg = "Doctor has already protected this night"
+                raise ValueError(msg)
             self.doctor_target = target_id
             self.players_acted.add(actor_id)
         else:
+            msg = f"Player {actor_id} with role {player.role.value} cannot perform {action_type}"
             raise ValueError(
-                f"Player {actor_id} with role {player.role.value} cannot perform {action_type}"
+                msg,
             )
 
     def _handle_vote(self, voter_id: str, action: str) -> None:
         """Handle voting phase actions."""
         if voter_id not in self.players:
-            raise ValueError(f"Unknown player: {voter_id}")
+            msg = f"Unknown player: {voter_id}"
+            raise ValueError(msg)
 
         player = self.players[voter_id]
         if not player.alive:
-            raise ValueError("Dead players cannot vote")
+            msg = "Dead players cannot vote"
+            raise ValueError(msg)
 
         if not action.startswith("vote:"):
-            raise ValueError(f"Invalid vote format: {action}")
+            msg = f"Invalid vote format: {action}"
+            raise ValueError(msg)
 
         target_id = action.split(":", 1)[1]
 
         if target_id not in self.players:
-            raise ValueError(f"Unknown target: {target_id}")
+            msg = f"Unknown target: {target_id}"
+            raise ValueError(msg)
 
         if not self.players[target_id].alive:
-            raise ValueError(f"Cannot vote for dead player: {target_id}")
+            msg = f"Cannot vote for dead player: {target_id}"
+            raise ValueError(msg)
 
         self.votes[voter_id] = target_id
         self.players_acted.add(voter_id)
@@ -244,18 +263,19 @@ class Arena:
         elif self.phase == Phase.RESOLUTION:
             self._start_next_day()
         elif self.phase == Phase.GAME_OVER:
-            raise ValueError("Game is already over")
+            msg = "Game is already over"
+            raise ValueError(msg)
 
     def _resolve_night(self) -> None:
         """Resolve night actions and transition to day."""
         # Determine if anyone dies
-        killed_player: Optional[str] = None
+        killed_player: str | None = None
 
         # Werewolves choose victim (majority vote among werewolves)
         if self.werewolf_targets:
             # For simplicity, if multiple targets, pick the first one
             # In a real game, this would be a vote
-            killed_player = list(self.werewolf_targets)[0]
+            killed_player = next(iter(self.werewolf_targets))
 
         # Doctor can save the victim
         if killed_player and killed_player == self.doctor_target:
@@ -265,7 +285,7 @@ class Arena:
             self.players[killed_player].alive = False
             self.eliminated_players.append(killed_player)
             self.actions.append(
-                f"Night {self.day_number}: A player was killed by werewolves"
+                f"Night {self.day_number}: A player was killed by werewolves",
             )
         else:
             self.actions.append(f"Night {self.day_number}: No one died")
@@ -298,7 +318,7 @@ class Arena:
             self.actions.append(f"Day {self.day_number}: No votes cast, no elimination")
         else:
             # Count votes
-            vote_counts: Dict[str, int] = {}
+            vote_counts: dict[str, int] = {}
             for target_id in self.votes.values():
                 vote_counts[target_id] = vote_counts.get(target_id, 0) + 1
 
@@ -309,7 +329,7 @@ class Arena:
             if len(candidates) > 1:
                 # Tie - no elimination
                 self.actions.append(
-                    f"Day {self.day_number}: Vote tied, no elimination"
+                    f"Day {self.day_number}: Vote tied, no elimination",
                 )
             else:
                 eliminated = candidates[0]
@@ -318,7 +338,7 @@ class Arena:
                 eliminated_role = self.players[eliminated].role.value
                 self.actions.append(
                     f"Day {self.day_number}: Player eliminated by vote "
-                    f"(was {eliminated_role})"
+                    f"(was {eliminated_role})",
                 )
 
         self.votes.clear()
@@ -350,17 +370,17 @@ class Arena:
             self.phase = Phase.GAME_OVER
             self.actions.append("Game Over: Villagers win! All werewolves eliminated")
             return True
-        elif len(alive_werewolves) >= len(alive_villagers):
+        if len(alive_werewolves) >= len(alive_villagers):
             self.winner = "werewolves"
             self.phase = Phase.GAME_OVER
             self.actions.append(
-                "Game Over: Werewolves win! They equal or outnumber the villagers"
+                "Game Over: Werewolves win! They equal or outnumber the villagers",
             )
             return True
 
         return False
 
-    def public_view(self) -> Dict[str, Any]:
+    def public_view(self) -> dict[str, Any]:
         """Return data safe for public consumption.
 
         This hides player roles and returns only publicly visible information.
@@ -378,13 +398,14 @@ class Arena:
             "player_count": len(self.players),
         }
 
-    def get_player_view(self, player_id: str) -> Dict[str, Any]:
+    def get_player_view(self, player_id: str) -> dict[str, Any]:
         """Return what a specific player can see.
 
         Includes their role, investigation results (if seer), etc.
         """
         if player_id not in self.players:
-            raise ValueError(f"Unknown player: {player_id}")
+            msg = f"Unknown player: {player_id}"
+            raise ValueError(msg)
 
         player = self.players[player_id]
         view = self.public_view()
@@ -407,7 +428,7 @@ class Arena:
 
         return view
 
-    def get_valid_actions(self, player_id: str) -> List[str]:  # noqa: C901
+    def get_valid_actions(self, player_id: str) -> list[str]:  # noqa: C901
         """Return list of valid actions for a player in the current phase."""
         if player_id not in self.players:
             return []

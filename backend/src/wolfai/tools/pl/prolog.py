@@ -1,5 +1,4 @@
-"""
-A functional Prolog execution engine implementing safe, isolated program execution.
+"""A functional Prolog execution engine implementing safe, isolated program execution.
 
 This module provides a clean interface for running Prolog programs with proper state
 management and isolation. It uses immutable state objects and automatic namespacing
@@ -20,7 +19,7 @@ Key features:
 import contextlib
 import uuid
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from pyswip import Prolog
 
@@ -29,8 +28,7 @@ from wolfai.tools.mcp_utils import tool
 
 @dataclass(frozen=True)
 class PrologState:
-    """
-    Immutable representation of a Prolog program's state.
+    """Immutable representation of a Prolog program's state.
 
     This class captures the complete state of a Prolog program, including all facts
     and rules, as well as the last executed query. Being immutable (frozen=True)
@@ -40,14 +38,13 @@ class PrologState:
         facts: List of strings, each representing a Prolog fact or rule
         query: Optional string containing the last executed query, if any
     """
-    facts: List[str]  # Each fact/rule as a string
+    facts: list[str]  # Each fact/rule as a string
     query: Optional[str] = None
 
 
 @dataclass
 class PrologResult:
-    """
-    Encapsulates the result of a Prolog query evaluation.
+    """Encapsulates the result of a Prolog query evaluation.
 
     This class provides a structured way to handle both successful query results
     and potential errors. For successful queries, it contains a list of variable
@@ -59,14 +56,13 @@ class PrologResult:
         error: Optional string containing error message if the query failed
     """
     success: bool
-    solutions: List[Dict[str, Any]]
+    solutions: list[dict[str, Any]]
     error: Optional[str] = None
 
 
 @contextlib.contextmanager
 def _temporary_prolog_env():
-    """
-    Create an isolated Prolog environment for safe query execution.
+    """Create an isolated Prolog environment for safe query execution.
 
     This context manager ensures that each query execution happens in a fresh,
     isolated environment. It:
@@ -89,7 +85,7 @@ def _temporary_prolog_env():
     try:
         # Declare common predicates as dynamic within our namespace
         # This allows us to assert facts at runtime
-        for pred in ['person', 'city', 'parent', 'grandparent']:
+        for pred in ["person", "city", "parent", "grandparent"]:
             list(prolog.query(f"dynamic({namespace}_{pred}/1), dynamic({namespace}_{pred}/2)"))
 
         yield prolog, namespace
@@ -100,8 +96,7 @@ def _temporary_prolog_env():
 
 
 def _namespace_predicate(pred: str, namespace: str) -> str:
-    """
-    Add namespace prefix to a predicate to prevent naming conflicts.
+    """Add namespace prefix to a predicate to prevent naming conflicts.
 
     This function handles both simple predicates and complex rules with body clauses.
     For rules (containing ':-'), it namespaces both the head and each predicate in
@@ -120,32 +115,31 @@ def _namespace_predicate(pred: str, namespace: str) -> str:
         >>> _namespace_predicate("parent(X, Y) :- person(X), person(Y)", "ns1")
         "ns1_parent(X, Y) :- ns1_person(X), ns1_person(Y)"
     """
-    if ':-' in pred:
+    if ":-" in pred:
         # For rules, we need to namespace both head and body
-        head, body = pred.split(':-', 1)
+        head, body = pred.split(":-", 1)
         head = _namespace_predicate(head.strip(), namespace)
         # Namespace each predicate in the body, but not built-ins
         body_parts = []
-        for part in body.split(','):
+        for part in body.split(","):
             part = part.strip()
-            if '(' in part:  # Only namespace predicates, not built-ins
+            if "(" in part:  # Only namespace predicates, not built-ins
                 body_parts.append(_namespace_predicate(part, namespace))
             else:
                 body_parts.append(part)
         return f"{head} :- {', '.join(body_parts)}"
 
-    if '(' not in pred:  # No arguments
+    if "(" not in pred:  # No arguments
         return f"{namespace}_{pred}"
 
-    pred_name = pred[:pred.index('(')]
-    pred_args = pred[pred.index('('):]
+    pred_name = pred[:pred.index("(")]
+    pred_args = pred[pred.index("("):]
     return f"{namespace}_{pred_name}{pred_args}"
 
 
 @tool()
-def parse_prolog_code(code: str) -> List[str]:
-    """
-    Parse raw Prolog code into individual statements.
+def parse_prolog_code(code: str) -> list[str]:
+    """Parse raw Prolog code into individual statements.
 
     This function handles various formats of Prolog code, including:
     - Multiple statements per line
@@ -165,27 +159,26 @@ def parse_prolog_code(code: str) -> List[str]:
     lines = []
     current = []
 
-    for line in code.split('\n'):
+    for line in code.split("\n"):
         line = line.strip()
-        if not line or line.startswith('%'):
+        if not line or line.startswith("%"):
             continue
 
         current.append(line)
-        if line.endswith('.'):
+        if line.endswith("."):
             # Complete statement found
-            lines.append(' '.join(current).strip())
+            lines.append(" ".join(current).strip())
             current = []
 
     # Handle any remaining content without trailing period
     if current:
-        lines.append(' '.join(current).strip())
+        lines.append(" ".join(current).strip())
 
     return lines
 
 
-def _load_facts(prolog: Prolog, facts: List[str], namespace: str) -> Optional[str]:
-    """
-    Load facts and rules into a Prolog environment with proper namespacing.
+def _load_facts(prolog: Prolog, facts: list[str], namespace: str) -> Optional[str]:
+    """Load facts and rules into a Prolog environment with proper namespacing.
 
     This function:
     1. Analyzes predicates to determine their arity
@@ -213,10 +206,10 @@ def _load_facts(prolog: Prolog, facts: List[str], namespace: str) -> Optional[st
 
         for fact in facts:
             fact = fact.strip()
-            if not fact or fact.startswith('%'):
+            if not fact or fact.startswith("%"):
                 continue
 
-            if fact.endswith('.'):
+            if fact.endswith("."):
                 fact = fact[:-1]
 
             fact = _namespace_predicate(fact, namespace)
@@ -230,36 +223,36 @@ def _load_facts(prolog: Prolog, facts: List[str], namespace: str) -> Optional[st
 DEFAULT_ARITY = 2
 
 
-def _analyze_predicates(facts: List[str]) -> tuple[set[str], dict[str, int]]:
+def _analyze_predicates(facts: list[str]) -> tuple[set[str], dict[str, int]]:
     """Analyze predicates and determine arity for each."""
     seen_predicates: set[str] = set()
     arity_map: dict[str, int] = {}
     for fact in facts:
         original = fact
-        if fact.endswith('.'):
+        if fact.endswith("."):
             fact = fact[:-1]
-        if ':-' in fact:
-            head = fact[:fact.index('(')]
-            arity = fact.count(',') + 1 if '(' in fact else 0
+        if ":-" in fact:
+            head = fact[:fact.index("(")]
+            arity = fact.count(",") + 1 if "(" in fact else 0
             seen_predicates.add(head)
             arity_map[head] = arity
-            for part in original.split(':-')[1].split(','):
+            for part in original.split(":-")[1].split(","):
                 part = part.strip()
-                if '(' in part:
-                    pred = part[:part.index('(')]
-                    arity = part.count(',') + 1
+                if "(" in part:
+                    pred = part[:part.index("(")]
+                    arity = part.count(",") + 1
                     seen_predicates.add(pred)
                     arity_map[pred] = arity
         else:
-            pred = fact[:fact.index('(')] if '(' in fact else fact
-            arity = fact.count(',') + 1 if '(' in fact else 0
+            pred = fact[:fact.index("(")] if "(" in fact else fact
+            arity = fact.count(",") + 1 if "(" in fact else 0
             seen_predicates.add(pred)
             arity_map[pred] = arity
     return seen_predicates, arity_map
 
 
 def _declare_predicates(
-    prolog: Prolog, namespace: str, seen_predicates: set[str], arity_map: dict[str, int]
+    prolog: Prolog, namespace: str, seen_predicates: set[str], arity_map: dict[str, int],
 ) -> None:
     """Declare predicates as dynamic with the correct arity."""
     for pred in seen_predicates:
@@ -269,8 +262,7 @@ def _declare_predicates(
 
 @tool
 def run_query(prolog: Prolog, query: str, namespace: str) -> PrologResult:
-    """
-    Execute a query in a Prolog environment and collect results.
+    """Execute a query in a Prolog environment and collect results.
 
     This function:
     1. Adds namespace prefix to the query
@@ -288,12 +280,12 @@ def run_query(prolog: Prolog, query: str, namespace: str) -> PrologResult:
         - List of solutions (dictionaries of variable bindings)
         - Error message if query failed
     """
-    query = query.strip().rstrip('.')
+    query = query.strip().rstrip(".")
     if not query:
         return PrologResult(
             success=False,
             solutions=[],
-            error="Empty query"
+            error="Empty query",
         )
 
     try:
@@ -321,13 +313,12 @@ def run_query(prolog: Prolog, query: str, namespace: str) -> PrologResult:
         return PrologResult(
             success=False,
             solutions=[],
-            error=f"Error executing query: {error_msg}"
+            error=f"Error executing query: {error_msg}",
         )
 
 @tool
 def consult(code: str) -> PrologState:
-    """
-    Parse Prolog code and create initial program state.
+    """Parse Prolog code and create initial program state.
 
     This is typically the first function called when working with a Prolog program.
     It takes raw Prolog code and creates a PrologState object containing the parsed
@@ -351,9 +342,8 @@ def consult(code: str) -> PrologState:
     return PrologState(facts=facts)
 
 
-def _execute(state: PrologState, query: str) -> Tuple[PrologResult, PrologState]:
-    """
-    Execute a query against a program state with proper isolation.
+def _execute(state: PrologState, query: str) -> tuple[PrologResult, PrologState]:
+    """Execute a query against a program state with proper isolation.
 
     This function:
     1. Creates a fresh Prolog environment
@@ -386,7 +376,7 @@ def _execute(state: PrologState, query: str) -> Tuple[PrologResult, PrologState]
             result = PrologResult(
                 success=False,
                 solutions=[],
-                error=f"Error loading program: {error}"
+                error=f"Error loading program: {error}",
             )
         else:
             # Execute query in isolated environment
@@ -395,6 +385,6 @@ def _execute(state: PrologState, query: str) -> Tuple[PrologResult, PrologState]
     # Create new state with updated query history
     new_state = PrologState(
         facts=state.facts,
-        query=query
+        query=query,
     )
     return result, new_state

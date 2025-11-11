@@ -2,6 +2,7 @@
 
 import pytest
 
+
 # Skip entire module if SWI-Prolog is not available
 try:
     import pyswip  # noqa: F401
@@ -62,10 +63,10 @@ def test_execute_simple_query():
     # Check result
     assert result.success
     assert len(result.solutions) == 3
-    solutions = [sol['X'] for sol in result.solutions]
-    assert 'peter' in solutions
-    assert 'john' in solutions
-    assert 'mary' in solutions
+    solutions = [sol["X"] for sol in result.solutions]
+    assert "peter" in solutions
+    assert "john" in solutions
+    assert "mary" in solutions
 
     # Check new state
     assert new_state.facts == state.facts
@@ -83,11 +84,11 @@ def test_execute_with_rules():
         parent(Z, Y).
     """)
 
-    result, new_state = _execute(state, "grandparent(john, Y)")
+    result, _new_state = _execute(state, "grandparent(john, Y)")
 
     assert result.success
     assert len(result.solutions) == 1
-    assert result.solutions[0]['Y'] == 'paul'
+    assert result.solutions[0]["Y"] == "paul"
 
 def test_execute_error_handling():
     """Test handling of invalid Prolog code."""
@@ -103,14 +104,14 @@ def test_execute_error_handling():
 
     # Invalid query
     state = consult("person(john).")
-    result, new_state = _execute(state, "invalid_query(")
+    result, _new_state = _execute(state, "invalid_query(")
     assert not result.success
     assert result.error is not None
 
 def test_empty_query():
     """Test handling of empty queries."""
     state = consult("person(john).")
-    result, new_state = _execute(state, "")
+    result, _new_state = _execute(state, "")
     assert not result.success
     assert "Empty query" in result.error
 
@@ -121,7 +122,7 @@ def test_state_isolation():
     result1, _ = _execute(state1, "person(X)")
     assert result1.success
     assert len(result1.solutions) == 1
-    assert result1.solutions[0]['X'] == 'john'
+    assert result1.solutions[0]["X"] == "john"
 
     # Second execution with different facts
     state2 = consult("city(london).")
