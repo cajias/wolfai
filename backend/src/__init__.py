@@ -1,1 +1,1 @@
-# Your project's source code will go here
+"""WolfAI source code package."""

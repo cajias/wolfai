@@ -7,7 +7,7 @@ from wolfai.tools import mcp_server_factory
 from . import prolog
 
 
-def main():
+def main() -> None:
     """Run the Prolog MCP server."""
     @click.command()
     @click.option("--port", default=8000, help="Port to listen on for SSE")
@@ -17,7 +17,7 @@ def main():
         default="stdio",
         help="Transport type",
     )
-    def cli(port: int, transport: str):
+    def cli(port: int, transport: str) -> None:
         mcp_server_factory.run_server(module=prolog, port=port, transport=transport)
 
     cli()

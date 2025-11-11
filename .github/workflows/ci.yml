@@ -30,6 +30,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e "backend/[dev]" build
 
+      - name: Setup lint configuration
+        run: python backend/setup_lint_config.py
+
       - name: Build package
         working-directory: backend
         run: python -m build

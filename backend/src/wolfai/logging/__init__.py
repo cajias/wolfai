@@ -4,7 +4,9 @@ import logging
 import sys
 
 
-def configure_basic_logging(level=logging.DEBUG, name=None):
+def configure_basic_logging(
+    level: int = logging.DEBUG, name: str | None = None,
+) -> logging.Logger:
     """Configure basic logging with standard format.
 
     Args:
@@ -16,10 +18,10 @@ def configure_basic_logging(level=logging.DEBUG, name=None):
     """
     logging.basicConfig(
         level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        stream=sys.stdout
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        stream=sys.stdout,
     )
     return logging.getLogger(name or __name__)
 
 
-__all__ = ['configure_basic_logging']
+__all__ = ["configure_basic_logging"]
