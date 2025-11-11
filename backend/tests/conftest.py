@@ -5,8 +5,10 @@ import pytest
 try:
     from pyswip import Prolog  # noqa: F401
     SWIPL_AVAILABLE = True
-except (ImportError, OSError):
-    # ImportError: pyswip not installed; OSError: SWI-Prolog not found on system
+except (ImportError, OSError, Exception):  # noqa: BLE001
+    # ImportError: pyswip not installed
+    # OSError: SWI-Prolog not found on system
+    # Exception: catches SwiPrologNotFoundError and other pyswip initialization errors
     SWIPL_AVAILABLE = False
 
 try:

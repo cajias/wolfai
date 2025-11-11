@@ -89,6 +89,14 @@ def get_type_validation_rules(annotation: Any) -> dict[str, Any]:
     if annotation in type_mapping:
         return type_mapping[annotation]
 
+    # Handle Optional types (Union[T, None])
+    if get_origin(annotation) is typing.Union:
+        # Get non-None types from the Union
+        non_none_args = [arg for arg in get_args(annotation) if arg is not type(None)]
+        if non_none_args:
+            # For Optional[T], use the schema for T
+            return get_type_validation_rules(non_none_args[0])
+
     # Handle List types
     if get_origin(annotation) is list:
         inner_type = get_args(annotation)[0] if get_args(annotation) else str
