@@ -98,7 +98,7 @@ def test_execute_error_handling():
     person(x).
     """)
 
-    result, new_state = _execute(state, "person(X)")
+    result, _new_state = _execute(state, "person(X)")
     assert not result.success
     assert result.error is not None
 

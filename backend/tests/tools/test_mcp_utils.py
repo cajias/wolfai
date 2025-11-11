@@ -246,7 +246,7 @@ class TestErrorHandling:
 
     def test_invalid_function(self):
         """Test handling functions that can't be converted to tools."""
-        def bad_function(*args, **kwargs) -> None:
+        def bad_function(*args: Any, **kwargs: Any) -> None:
             pass
 
         tool = function_to_mcp_tool(bad_function)

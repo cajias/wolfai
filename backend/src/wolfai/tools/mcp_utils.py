@@ -219,8 +219,7 @@ def function_to_mcp_tool(func: Callable, name: Optional[str] = None) -> types.To
     # Add example if available
     if doc.examples:
         descriptions.append("Examples:")
-        for example in doc.examples:
-            descriptions.append(example.description)
+        descriptions.extend(example.description for example in doc.examples)
 
     # Create MCP tool
     tool_name = name or func.__name__

@@ -32,10 +32,7 @@ def capture_process_output(process, output_queue):
     """Capture and log process output in real-time."""
     try:
         for raw_line in iter(process.stdout.readline, ""):
-            if isinstance(raw_line, bytes):  # Ensure decoding if necessary
-                decoded_line = raw_line.decode("utf-8")
-            else:
-                decoded_line = raw_line
+            decoded_line = raw_line.decode("utf-8") if isinstance(raw_line, bytes) else raw_line
             line = decoded_line.strip()
             output_queue.put(line)
             logger.debug("PROCESS OUTPUT: %s", line)
@@ -114,7 +111,7 @@ async def test_prolog_agent_initialization(tmp_path):
             logger.exception(log_line)
 
         # Write process output to debug log file
-        with open(log_file, "w") as f:
+        with log_file.open("w") as f:
             while not output_queue.empty():
                 f.write(output_queue.get() + "\n")
 
@@ -130,7 +127,7 @@ async def test_prolog_agent_initialization(tmp_path):
             logger.exception(log_line)
 
         # Write process output to debug log file
-        with open(log_file, "w") as f:
+        with log_file.open("w") as f:
             while not output_queue.empty():
                 f.write(output_queue.get() + "\n")
 

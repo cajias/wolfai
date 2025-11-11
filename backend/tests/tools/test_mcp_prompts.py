@@ -99,7 +99,7 @@ class TestPromptConversion:
         def invalid_func() -> str:
             return "not a prompt"
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="must return MCPPrompt"):
             function_to_mcp_prompt(invalid_func)
 
 
@@ -192,7 +192,7 @@ class TestErrorHandling:
         def invalid_prompt() -> MCPPrompt:
             return "not a prompt"  # Invalid return type
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="must return MCPPrompt"):
             function_to_mcp_prompt(invalid_prompt)
 
     def test_prompt_validation(self):
