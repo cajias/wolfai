@@ -1,3 +1,5 @@
+"""Utilities to convert MCP tools to LangChain StructuredTools."""
+
 import asyncio
 import logging
 from typing import Any
@@ -33,12 +35,13 @@ async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredT
 
         # Use **kwargs so the function accepts any named args (e.g. prolog=..., query=...)
         async def tool_function_sync(*args: Any, **kwargs: Any) -> mcp_types.CallToolResult:
-            """A synchronous function that:
-              - Accepts unlimited positional args (*args)
-              - Accepts unlimited keyword args (**kwargs)
-              - Merges them into a final dictionary
-              - Uses the tool's schema to decide how to handle the positional args
-              - Calls an async function with asyncio.run().
+            """A synchronous function that wraps MCP tool invocation.
+
+            - Accepts unlimited positional args (*args)
+            - Accepts unlimited keyword args (**kwargs)
+            - Merges them into a final dictionary
+            - Uses the tool's schema to decide how to handle the positional args
+            - Calls an async function with asyncio.run().
 
             Returns:
               The result of calling the MCP tool with the merged arguments.
@@ -78,7 +81,7 @@ async def _parse_variadic_args(
 
             # If that field is not in 'props', fallback or just assume it
             if field_name not in props:
-                logging.warning(f"Field '{field_name}' not found in properties. Using anyway.")
+                logging.warning("Field '%s' not found in properties. Using anyway.", field_name)
 
             # If there's exactly one positional argument, store it directly
             # If there's multiple, store them as a list, or handle them differently

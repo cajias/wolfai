@@ -4,8 +4,13 @@ import inspect
 from typing import Any, Callable, Optional
 
 import anyio
+import uvicorn
 from mcp import types
 from mcp.server.lowlevel import Server
+from mcp.server.sse import SseServerTransport
+from mcp.server.stdio import stdio_server
+from starlette.applications import Starlette
+from starlette.routing import Mount, Route
 
 from wolfai.tools.mcp_utils import generate_from_module
 
@@ -124,8 +129,6 @@ def run_server(
     app = server.create_server()
 
     if transport == "stdio":
-        from mcp.server.stdio import stdio_server
-
         async def arun() -> None:
             async with stdio_server() as streams:
                 await app.run(
@@ -134,10 +137,6 @@ def run_server(
 
         anyio.run(arun)
     else:
-        from mcp.server.sse import SseServerTransport
-        from starlette.applications import Starlette
-        from starlette.routing import Mount, Route
-
         sse = SseServerTransport("/messages/")
 
         async def handle_sse(request: Any) -> None:
@@ -156,6 +155,5 @@ def run_server(
             ],
         )
 
-        import uvicorn
         uvicorn.run(starlette_app, host="0.0.0.0", port=port)
 

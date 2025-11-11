@@ -1,3 +1,5 @@
+"""Utility functions for agent operations."""
+
 from typing import Any
 
 import openai

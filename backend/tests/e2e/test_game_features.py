@@ -13,7 +13,9 @@ from pytest_bdd import given, parsers, scenarios, then, when
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
+from wolfai import api
 from wolfai.api import app
+from wolfai.arena import Role
 
 
 # Load all feature files
@@ -64,9 +66,7 @@ def api_server_running(client: TestClient) -> None:
     # Clear any existing games
     app.state.__dict__.pop("_games", None)
     app.state.__dict__.pop("_connections", None)
-    # Import and clear the module-level dictionaries
-    from wolfai import api
-
+    # Clear the module-level dictionaries
     api._games.clear()
     api._connections.clear()
 
@@ -74,8 +74,6 @@ def api_server_running(client: TestClient) -> None:
 @given("no games are currently active")
 def no_active_games(client: TestClient) -> None:
     """Ensure the games list is empty."""
-    from wolfai import api
-
     api._games.clear()
     api._connections.clear()
     response = client.get("/games")
@@ -898,9 +896,6 @@ def only_public_info(context: dict[str, Any]) -> None:
 @then(parsers.parse('the server should maintain "{player}" as "{role}" internally'))
 def server_maintains_role(context: dict[str, Any], player: str, role: str) -> None:
     """Verify server has correct internal role."""
-    from wolfai import api
-    from wolfai.arena import Role
-
     game_id = context.get("current_game_id")
     arena = api._games.get(game_id)
     assert arena is not None

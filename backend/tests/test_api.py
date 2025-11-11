@@ -1,9 +1,12 @@
+"""Tests for FastAPI REST endpoints."""
+
 from fastapi.testclient import TestClient
 
 from wolfai.api import _games, app
 
 
 def test_game_flow() -> None:
+    """Test complete game flow: create, action, get state, end game."""
     client = TestClient(app)
 
     # Start new game
@@ -36,6 +39,7 @@ def test_game_flow() -> None:
 
 
 def test_websocket_updates() -> None:
+    """Test WebSocket receives state updates when actions are posted."""
     client = TestClient(app)
 
     game_id = client.post("/new-game").json()["game_id"]
@@ -50,6 +54,7 @@ def test_websocket_updates() -> None:
 
 
 def test_websocket_broadcasts_to_all_clients() -> None:
+    """Test that state updates are broadcasted to all connected WebSocket clients."""
     client = TestClient(app)
 
     game_id = client.post("/new-game").json()["game_id"]

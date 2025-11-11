@@ -1,3 +1,5 @@
+"""FastAPI REST and WebSocket endpoints for Werewolf game."""
+
 from __future__ import annotations
 
 import uuid

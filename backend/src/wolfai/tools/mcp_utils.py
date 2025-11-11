@@ -375,6 +375,7 @@ def generate_prompts_from_module(
 
 
 def is_mp_prompt_type(obj: Any) -> bool:
+    """Check if an object is an MCP prompt type."""
     return (
         hasattr(obj, "_is_mcp_prompt") or
         (inspect.isfunction(obj) and
@@ -382,6 +383,7 @@ def is_mp_prompt_type(obj: Any) -> bool:
     )
 
 def is_mp_tool_type(obj: Any) -> bool:
+    """Check if an object is an MCP tool type."""
     return (
         hasattr(obj, "_is_mcp_tool") or
         (inspect.isfunction(obj) and obj.__annotations__.get("return") != MCPPrompt)

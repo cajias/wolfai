@@ -57,39 +57,7 @@ ignore = [
     "E501",  # Line too long (handled by Black)
 ]
 
-# Project-specific ignores (too strict for existing codebase migrating to strict linting)
-extend-ignore = [
-    "D100",     # Missing docstring in public module
-    "D103",     # Missing docstring in public function
-    "D104",     # Missing docstring in public package
-    "D205",     # Missing blank line after summary
-    "PLC0415",  # Import outside top-level (intentional for lazy loading)
-    "G004",     # Logging f-string (acceptable for readability)
-    "G201",     # Logging .exception vs .error (both are valid)
-    "ERA001",   # Commented-out code (includes intentional TODOs)
-    "ARG001",   # Unused function argument (can be part of interface/protocol)
-    "ARG002",   # Unused method argument (can be part of interface/protocol)
-    "BLE001",   # Blind except (intentional for resilience in some cases)
-    "ANN401",   # Any type (appropriate in generic code)
-    "ANN002",   # Missing type for *args in test functions
-    "ANN003",   # Missing type for **kwargs in test functions
-    "PLW2901",  # Redefined loop name (would require refactoring)
-    "PERF203",  # try-except in loop (acceptable trade-off for robustness)
-    "PERF401",  # Manual list comprehension (readability over micro-optimization)
-    "PTH123",   # builtin open (pathlib not always better)
-    "PT011",    # pytest.raises too broad (acceptable in tests)
-    "RUF059",   # Unused unpacked variable (intentional in some cases)
-    "S104",     # Hardcoded bind all interfaces (acceptable for dev server)
-    "S110",     # try-except-pass (intentional error suppression in tests)
-    "S112",     # try-except-continue (intentional error handling pattern)
-    "S603",     # subprocess without shell (false positive, we don't use shell=True)
-    "TRY004",   # Prefer TypeError (ValueError is also valid)
-    "TRY300",   # try-consider-else (style preference)
-    "TRY301",   # raise-within-try (acceptable pattern)
-    "TRY401",   # Verbose log message (acceptable logging pattern)
-]
-
-# Configure per-file ignores for test files
+# Configure per-file ignores for test files and lazy-loading modules
 [lint.per-file-ignores]
 "tests/**/*.py" = [
     "S101",    # Allow assert statements in tests
@@ -104,6 +72,13 @@ extend-ignore = [
     "ANN201",  # Missing return type annotation
     "PLR2004", # Allow magic values in tests
     "PLR0913", # Allow many arguments in test functions
+]
+# Lazy loading modules (intentional architectural pattern per CLAUDE.md)
+"src/wolfai/agents/__init__.py" = [
+    "PLC0415",  # Lazy import to avoid loading deprecated LangChain dependencies
+]
+"src/wolfai/tools/pl/__init__.py" = [
+    "PLC0415",  # Lazy import to avoid requiring SWI-Prolog at import time
 ]
 
 # Configure complexity thresholds

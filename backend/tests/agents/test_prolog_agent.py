@@ -1,3 +1,5 @@
+"""Tests for PrologAgent integration with MCP server."""
+
 import asyncio
 import os
 import queue
@@ -34,10 +36,10 @@ def capture_process_output(process, output_queue):
                 line = line.decode("utf-8")
             line = line.strip()
             output_queue.put(line)
-            logger.debug(f"PROCESS OUTPUT: {line}")
-    except Exception as e:
-        logger.exception(f"Process output capture error: {e}")
-        logger.exception(traceback.format_exc())
+            logger.debug("PROCESS OUTPUT: %s", line)
+    except Exception:
+        logger.exception("Process output capture error")
+        logger.exception("%s", traceback.format_exc())
     finally:
         process.stdout.close()
 
@@ -117,8 +119,8 @@ async def test_prolog_agent_initialization(tmp_path):
         pytest.fail(f"Agent initialization timed out. See debug log: {log_file}")
 
     except Exception as e:
-        logger.exception(f"Unexpected error during agent initialization: {e}")
-        logger.exception(traceback.format_exc())
+        logger.exception("Unexpected error during agent initialization")
+        logger.exception("%s", traceback.format_exc())
 
         logger.exception("Process Output Log:")
         while not output_queue.empty():
