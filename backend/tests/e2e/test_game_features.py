@@ -61,7 +61,7 @@ def client() -> TestClient:
 
 
 @given("the API server is running")
-def api_server_running(_client: TestClient) -> None:
+def api_server_running(client: TestClient) -> None:
     """Verify the API server is accessible."""
     # Clear any existing games
     app.state.__dict__.pop("_games", None)
@@ -769,7 +769,7 @@ def no_errors_logged(context: dict[str, Any]) -> None:
 
 
 @then("I should receive a WebSocket update within 2 seconds")
-def receive_websocket_update(_context: dict[str, Any]) -> None:
+def receive_websocket_update(context: dict[str, Any]) -> None:
     """Verify WebSocket update received.
 
     Note: BDD WebSocket tests are skipped due to context manager limitations.
@@ -795,7 +795,7 @@ def websocket_includes_action(context: dict[str, Any], action: str) -> None:
 
 
 @then(parsers.parse("all {count:d} clients should receive the update"))
-def all_clients_receive_update(_context: dict[str, Any], _count: int) -> None:
+def all_clients_receive_update(context: dict[str, Any], count: int) -> None:
     """Verify all WebSocket clients got update."""
     pytest.skip("WebSocket testing in BDD context not supported - see test_websocket_async.py")
 
@@ -813,13 +813,13 @@ def update_within_timeout(context: dict[str, Any]) -> None:
 
 
 @then(parsers.parse('I should receive the update for "{action}"'))
-def should_receive_action_update(_context: dict[str, Any], _action: str) -> None:
+def should_receive_action_update(context: dict[str, Any], action: str) -> None:
     """Verify specific action update."""
     pytest.skip("WebSocket testing in BDD context not supported - see test_websocket_async.py")
 
 
 @then(parsers.parse("I should receive {count:d} WebSocket updates"))
-def receive_multiple_updates(_context: dict[str, Any], _count: int) -> None:
+def receive_multiple_updates(context: dict[str, Any], count: int) -> None:
     """Verify multiple updates received."""
     pytest.skip("WebSocket testing in BDD context not supported - see test_websocket_async.py")
 

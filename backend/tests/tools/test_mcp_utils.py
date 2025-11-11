@@ -27,20 +27,20 @@ def simple_function(x: int, y: str = "default") -> str:
 
 
 def complex_function(
-    _items: list[dict[str, Any]],
-    _filter_by: Optional[str] = None,
-    _limit: int = 10,
-    _created_at: Optional[datetime] = None,
-    _active_date: Optional[date] = None,
+    items: list[dict[str, Any]],
+    filter_by: Optional[str] = None,
+    limit: int = 10,
+    created_at: Optional[datetime] = None,
+    active_date: Optional[date] = None,
 ) -> list[dict[str, Any]]:
     """A function with more complex types for testing MCP utils type handling.
 
     Args:
-        _items: List of dictionaries to process (unused - for type testing)
-        _filter_by: Optional filter key (unused - for type testing)
-        _limit: Maximum items to return (unused - for type testing)
-        _created_at: Timestamp of creation (unused - for type testing)
-        _active_date: Date of activation (unused - for type testing)
+        items: List of dictionaries to process (unused - for type testing)
+        filter_by: Optional filter key (unused - for type testing)
+        limit: Maximum items to return (unused - for type testing)
+        created_at: Timestamp of creation (unused - for type testing)
+        active_date: Date of activation (unused - for type testing)
     """
     return []
 

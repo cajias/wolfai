@@ -115,9 +115,11 @@ ignore = [
 ]
 "tests/e2e/test_game_features.py" = [
     "PERF203", # Try-except in loop (BDD test pattern)
+    "ARG001",  # BDD step functions have unused fixture/context params
 ]
 "tests/tools/test_mcp_utils.py" = [
     "ANN401",  # Test functions need Any for generic tool testing
+    "ARG001",  # Test helper functions have unused params for schema generation
 ]
 
 # Configure complexity thresholds
