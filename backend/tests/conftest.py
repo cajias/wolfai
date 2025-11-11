@@ -22,7 +22,7 @@ def pytest_configure(config):
     )
 
 
-def pytest_collection_modifyitems(_config, items):
+def pytest_collection_modifyitems(config, items):  # noqa: ARG001
     """Skip tests that require SWI-Prolog if it's not available."""
     swipl_available = SWIPL_AVAILABLE
 

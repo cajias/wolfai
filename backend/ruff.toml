@@ -76,9 +76,48 @@ ignore = [
 # Lazy loading modules (intentional architectural pattern per CLAUDE.md)
 "src/wolfai/agents/__init__.py" = [
     "PLC0415",  # Lazy import to avoid loading deprecated LangChain dependencies
+    "ANN401",  # __getattr__ must return Any
 ]
 "src/wolfai/tools/pl/__init__.py" = [
     "PLC0415",  # Lazy import to avoid requiring SWI-Prolog at import time
+    "ANN401",  # __getattr__ must return Any
+]
+# Generic tool infrastructure requires Any for flexibility
+"src/wolfai/tools/mcp_utils.py" = [
+    "ANN401",  # Generic introspection code requires Any
+    "PERF203", # Try-except in loop is intentional for robustness
+    "S112",    # Try-except-continue is intentional for skipping invalid tools
+    "TRY004",  # ValueError is appropriate for invalid return type
+]
+"src/wolfai/tools/mcp_server_factory.py" = [
+    "ANN401",  # Generic MCP server requires Any
+    "S104",    # Bind to 0.0.0.0 is intentional for dev server
+]
+"src/wolfai/tools/langchain_utils.py" = [
+    "ANN401",  # Variadic args/kwargs require Any for generic tools
+]
+"src/wolfai/agents/utils.py" = [
+    "ANN401",  # Agent executor type is Any (external library)
+]
+"src/wolfai/agents/prolog.py" = [
+    "TRY300",  # Style preference - early return pattern is clear
+    "TRY301",  # Not abstracting single raise - clear as-is
+]
+"src/wolfai/api.py" = [
+    "PERF203", # Try-except in loop intentional for WebSocket robustness
+]
+"src/wolfai/tools/pl/prolog.py" = [
+    "TRY300",  # Style preference - early return pattern
+]
+"tests/agents/test_prolog_agent.py" = [
+    "S603",    # subprocess call with user-controlled path (test only)
+    "PERF203", # Try-except in loop (test logging pattern)
+]
+"tests/e2e/test_game_features.py" = [
+    "PERF203", # Try-except in loop (BDD test pattern)
+]
+"tests/tools/test_mcp_utils.py" = [
+    "ANN401",  # Test functions need Any for generic tool testing
 ]
 
 # Configure complexity thresholds
