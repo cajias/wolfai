@@ -89,7 +89,9 @@ class ModuleServer:
 
             return self._format_result(result)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            # Broad exception catch is intentional: tool handler must be resilient
+            # to prevent server crashes from any tool execution errors
             return [types.TextContent(type="text", text=f"Error: {e!s}")]
 
     def create_server(self) -> Server:

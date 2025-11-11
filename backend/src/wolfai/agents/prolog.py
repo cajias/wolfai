@@ -121,7 +121,7 @@ class PrologAgent:
     async def __call__(
         self,
         messages: list[BaseMessage],
-        config: Optional[RunnableConfig] = None,
+        _config: Optional[RunnableConfig] = None,
     ) -> AIMessage:
         """Process a sequence of messages and generate a Prolog reasoning-powered AI response.
 

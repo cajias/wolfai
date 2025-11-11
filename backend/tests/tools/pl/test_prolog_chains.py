@@ -6,7 +6,7 @@ import pytest
 # Skip entire module if SWI-Prolog is not available
 try:
     import pyswip  # noqa: F401
-except Exception:
+except (ImportError, OSError):
     pytest.skip("SWI-Prolog not available", allow_module_level=True)
 
 from tests.tools.pl.test_mcp_mock import MockMCPSession

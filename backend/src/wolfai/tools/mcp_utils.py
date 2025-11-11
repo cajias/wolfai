@@ -260,7 +260,8 @@ def generate_tools_from_module(
         if callable(attr):
             try:
                 tools.append(function_to_mcp_tool(attr, name=attr_name))
-            except Exception:
+            except Exception:  # noqa: BLE001
+                # Skip functions that can't be converted to tools (invalid signatures, missing annotations, etc.)
                 continue
 
     return tools
@@ -368,7 +369,8 @@ def generate_prompts_from_module(
             if hasattr(obj, "_mcp_prompt_name"):
                 prompt.name = obj._mcp_prompt_name
             prompts.append(prompt)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            # Skip prompts that can't be converted (invalid signatures, missing annotations, etc.)
             print(f"Warning: Could not convert {name} to prompt: {e}")
 
     return prompts
@@ -392,10 +394,16 @@ def is_mp_tool_type(obj: Any) -> bool:
 
 def generate_from_module(
     module: Any,
-    include_private: bool = False,
-    exclude: Optional[list[str]] = None,
+    _include_private: bool = False,
+    _exclude: Optional[list[str]] = None,
 ) -> tuple[list[types.Tool], list[types.Prompt]]:
-    """Generate both MCP tools and prompts from a module."""
+    """Generate both MCP tools and prompts from a module.
+
+    Args:
+        module: Module to extract tools and prompts from
+        _include_private: Reserved for future use
+        _exclude: Reserved for future use
+    """
     tools = [function_to_mcp_tool(obj) for _, obj in inspect.getmembers(module, is_mp_tool_type)]
     prompts = [function_to_mcp_prompt(obj) for _, obj in inspect.getmembers(module, is_mp_prompt_type)]
     return tools, prompts

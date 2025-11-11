@@ -217,7 +217,9 @@ def _load_facts(prolog: Prolog, facts: list[str], namespace: str) -> Optional[st
             list(prolog.query(f"asserta(({fact}))"))
 
         return None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        # Broad exception catch is intentional: pyswip can raise various exceptions
+        # from the Prolog engine that aren't well-defined in the public API
         return str(e)
 
 
@@ -306,7 +308,8 @@ def run_query(prolog: Prolog, query: str, namespace: str) -> PrologResult:
                 solutions.append(solution)
 
         return PrologResult(success=True, solutions=solutions)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        # Broad exception catch is intentional: pyswip can raise various Prolog execution errors
         # Extract meaningful part of error message
         error_msg = str(e)
         if "Caused by" in error_msg:

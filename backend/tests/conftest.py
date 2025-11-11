@@ -5,7 +5,8 @@ import pytest
 try:
     from pyswip import Prolog  # noqa: F401
     SWIPL_AVAILABLE = True
-except Exception:
+except (ImportError, OSError):
+    # ImportError: pyswip not installed; OSError: SWI-Prolog not found on system
     SWIPL_AVAILABLE = False
 
 try:
@@ -21,7 +22,7 @@ def pytest_configure(config):
     )
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(_config, items):
     """Skip tests that require SWI-Prolog if it's not available."""
     swipl_available = SWIPL_AVAILABLE
 
