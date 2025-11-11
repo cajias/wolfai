@@ -122,8 +122,8 @@ def _namespace_predicate(pred: str, namespace: str) -> str:
         head = _namespace_predicate(head.strip(), namespace)
         # Namespace each predicate in the body, but not built-ins
         body_parts = []
-        for part in body.split(","):
-            part = part.strip()
+        for raw_part in body.split(","):
+            part = raw_part.strip()
             if "(" in part:  # Only namespace predicates, not built-ins
                 body_parts.append(_namespace_predicate(part, namespace))
             else:
@@ -160,8 +160,8 @@ def parse_prolog_code(code: str) -> list[str]:
     lines = []
     current = []
 
-    for line in code.split("\n"):
-        line = line.strip()
+    for raw_line in code.split("\n"):
+        line = raw_line.strip()
         if not line or line.startswith("%"):
             continue
 
@@ -205,16 +205,16 @@ def _load_facts(prolog: Prolog, facts: list[str], namespace: str) -> Optional[st
         seen_predicates, arity_map = _analyze_predicates(facts)
         _declare_predicates(prolog, namespace, seen_predicates, arity_map)
 
-        for fact in facts:
-            fact = fact.strip()
+        for raw_fact in facts:
+            fact = raw_fact.strip()
             if not fact or fact.startswith("%"):
                 continue
 
             if fact.endswith("."):
                 fact = fact[:-1]
 
-            fact = _namespace_predicate(fact, namespace)
-            list(prolog.query(f"asserta(({fact}))"))
+            namespaced_fact = _namespace_predicate(fact, namespace)
+            list(prolog.query(f"asserta(({namespaced_fact}))"))
 
         return None
     except Exception as e:  # noqa: BLE001
@@ -230,17 +230,16 @@ def _analyze_predicates(facts: list[str]) -> tuple[set[str], dict[str, int]]:
     """Analyze predicates and determine arity for each."""
     seen_predicates: set[str] = set()
     arity_map: dict[str, int] = {}
-    for fact in facts:
-        original = fact
-        if fact.endswith("."):
-            fact = fact[:-1]
+    for raw_fact in facts:
+        original = raw_fact
+        fact = raw_fact[:-1] if raw_fact.endswith(".") else raw_fact
         if ":-" in fact:
             head = fact[:fact.index("(")]
             arity = fact.count(",") + 1 if "(" in fact else 0
             seen_predicates.add(head)
             arity_map[head] = arity
-            for part in original.split(":-")[1].split(","):
-                part = part.strip()
+            for raw_part in original.split(":-")[1].split(","):
+                part = raw_part.strip()
                 if "(" in part:
                     pred = part[:part.index("(")]
                     arity = part.count(",") + 1

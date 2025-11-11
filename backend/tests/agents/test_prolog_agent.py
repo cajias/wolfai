@@ -31,10 +31,12 @@ logger = configure_basic_logging(name=__name__)
 def capture_process_output(process, output_queue):
     """Capture and log process output in real-time."""
     try:
-        for line in iter(process.stdout.readline, ""):
-            if isinstance(line, bytes):  # Ensure decoding if necessary
-                line = line.decode("utf-8")
-            line = line.strip()
+        for raw_line in iter(process.stdout.readline, ""):
+            if isinstance(raw_line, bytes):  # Ensure decoding if necessary
+                decoded_line = raw_line.decode("utf-8")
+            else:
+                decoded_line = raw_line
+            line = decoded_line.strip()
             output_queue.put(line)
             logger.debug("PROCESS OUTPUT: %s", line)
     except Exception:
