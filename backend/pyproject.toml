@@ -57,9 +57,14 @@ package-dir = {"" = "src"}
 
 # Lint Configurations
 # -------------------
-# Using strict configurations from agentic-guardrails package
-# Source: https://github.com/cajias/lint-configs v1.0.0
-# Installed via: pip install "agentic-guardrails @ git+https://github.com/cajias/lint-configs.git@v1.0.0#subdirectory=python"
+# Using strict configurations from agentic-guardrails v1.0.0
+# Source: https://github.com/cajias/lint-configs/releases/tag/v1.0.0
+#
+# Note: pyproject-linters.toml is downloaded locally because Ruff's 'extend'
+# directive requires a file path, not a package reference. The agentic-guardrails
+# package is kept as a dependency for documentation and potential tooling.
+#
+# To update: Download new version from the release and update package version
 
 # Pytest
 # ------
@@ -94,7 +99,7 @@ markers = [
 
 # Ruff - Extend from agentic-guardrails package config
 [tool.ruff]
-extend = "python/pyproject-linters.toml"  # From agentic-guardrails package
+extend = "pyproject-linters.toml"  # Downloaded from agentic-guardrails v1.0.0
 target-version = "py311"  # Override for this project
 
 # Project-specific per-file ignores
