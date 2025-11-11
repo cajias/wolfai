@@ -101,81 +101,14 @@ target-version = "py311"  # Override for this project
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402"]
 
-# Black - Extend from canonical config
-[tool.black]
-extend-config = "pyproject-linters.toml"
-target-version = ["py311", "py312"]
-
-# MyPy - Extend from canonical config
+# MyPy - Project-specific overrides only
+# Base strict settings come from agentic-guardrails package
 [tool.mypy]
 python_version = "3.11"
 files = "."
-
-# Import base strict settings from pyproject-linters.toml
-strict = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-warn_return_any = true
-warn_unused_ignores = true
-warn_unreachable = true
-warn_no_return = true
-strict_equality = true
 
 # Project-specific overrides
 [[tool.mypy.overrides]]
 module = "tests.*"
 allow_untyped_defs = true
 disable_error_code = "attr-defined"
-
-# Pylint - Extend from canonical config
-[tool.pylint.main]
-py-version = "3.11"
-
-[tool.pylint.format]
-max-line-length = 120
-
-[tool.pylint.design]
-max-args = 5
-max-locals = 15
-max-returns = 6
-max-branches = 12
-max-statements = 50
-max-parents = 7
-max-attributes = 7
-min-public-methods = 1
-max-public-methods = 20
-
-[tool.pylint."messages control"]
-disable = [
-    "C0114",  # missing-module-docstring (handled by ruff)
-    "C0115",  # missing-class-docstring (handled by ruff)
-    "C0116",  # missing-function-docstring (handled by ruff)
-]
-
-[tool.pylint.similarities]
-min-similarity-lines = 4
-ignore-comments = true
-ignore-docstrings = true
-ignore-imports = true
-ignore-signatures = true
-
-# Coverage - Extend from canonical config
-[tool.coverage.run]
-branch = true
-source = ["src"]
-omit = [
-    "*/tests/*",
-    "*/test_*.py",
-]
-
-[tool.coverage.report]
-fail_under = 80
-precision = 2
-show_missing = true
-skip_covered = false
-
-[tool.coverage.html]
-directory = "htmlcov"
-
-[tool.coverage.xml]
-output = "coverage.xml"
