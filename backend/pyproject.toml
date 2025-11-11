@@ -92,18 +92,51 @@ markers = [
     "bdd: marks BDD/Cucumber tests",
 ]
 
-# Ruff - Extend from agentic-guardrails package config
+# Ruff - Based on agentic-guardrails package config
 [tool.ruff]
-extend = "python/pyproject-linters.toml"  # From agentic-guardrails package
-target-version = "py311"  # Override for this project
+line-length = 100
+target-version = "py311"
 
-# Project-specific per-file ignores
+[tool.ruff.lint]
+# Enable comprehensive linting for code quality, duplication, and dead code detection
+select = [
+    "E",     # pycodestyle errors
+    "F",     # Pyflakes (includes unused imports F401, unused variables F841)
+    "I",     # isort (import sorting)
+    "B",     # flake8-bugbear (common bugs)
+    "W",     # pycodestyle warnings
+    "C90",   # McCabe complexity
+    "PLR",   # Pylint refactoring (duplicate code, too many args, etc.)
+    "SIM",   # flake8-simplify (detect overly complex code)
+]
+
+# Only ignore rules that conflict with Black or are false positives
+ignore = [
+    "E203",  # Whitespace before ':' (conflicts with Black)
+    "E501",  # Line too long (handled by formatter)
+]
+
+# Configure per-file ignores
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402"]
+"tests/**/*.py" = [
+    "PLR2004", # Allow magic values in tests
+    "PLR0913", # Allow many arguments in test functions
+]
 
-# Black - Extend from canonical config
+# Configure complexity thresholds
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-args = 5
+max-branches = 12
+max-returns = 6
+max-statements = 50
+
+# Black - Based on canonical config
 [tool.black]
-extend-config = "pyproject-linters.toml"
+line-length = 100
 target-version = ["py311", "py312"]
 
 # MyPy - Extend from canonical config
