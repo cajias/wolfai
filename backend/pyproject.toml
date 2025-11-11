@@ -102,9 +102,21 @@ markers = [
 extend = "ruff.toml"  # Extracted from agentic-guardrails v1.0.0
 target-version = "py311"  # Override for this project
 
+# Project-specific rule adjustments
+[tool.ruff.lint]
+extend-ignore = [
+    "D100",     # Missing docstring in public module (too strict for existing code)
+    "D103",     # Missing docstring in public function (too strict for existing code)
+    "D104",     # Missing docstring in public package (too strict for existing code)
+    "PLC0415",  # Import outside top-level (intentional for lazy loading in __init__.py)
+    "G004",     # Logging f-string (acceptable for readability)
+    "ERA001",   # Commented-out code (includes intentional TODOs and documentation)
+]
+
 # Project-specific per-file ignores
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["E402"]
+"__init__.py" = ["E402", "PLC0415"]  # Allow late imports and imports outside top-level in __init__ files
+"tests/**" = ["ARG001"]  # Allow unused arguments in test fixtures
 
 # MyPy - Project-specific overrides only
 # Base strict settings come from agentic-guardrails package
