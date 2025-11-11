@@ -15,28 +15,28 @@ def create_prolog_chain_prompt() -> MCPPrompt:
             types.PromptArgument(
                 name="question",
                 description="Natural language question to answer",
-                required=True
-            )
+                required=True,
+            ),
         ],
         messages=[
             # Initial system instruction as assistant message
             create_text_message(
                 "assistant",
-                "I will help answer questions by converting them to Prolog code and executing it."
+                "I will help answer questions by converting them to Prolog code and executing it.",
             ),
             # Example interaction
             create_text_message(
                 "user",
-                "If all humans are mortal and Socrates is human, is Socrates mortal?"
+                "If all humans are mortal and Socrates is human, is Socrates mortal?",
             ),
             create_text_message(
                 "assistant",
-                "Let me convert this to Prolog code:\n\nhuman(socrates).\nmortal(X) :- human(X).\n?- mortal(socrates)."
+                "Let me convert this to Prolog code:\n\nhuman(socrates).\nmortal(X) :- human(X).\n?- mortal(socrates).",
             ),
             # Example execution result
             create_text_message(
                 "assistant",
-                "The execution shows that Socrates is indeed mortal, as this follows from our rules."
+                "The execution shows that Socrates is indeed mortal, as this follows from our rules.",
             ),
             # Handle the actual question
             create_text_message("user", "{question}"),
@@ -45,8 +45,8 @@ def create_prolog_chain_prompt() -> MCPPrompt:
             # Execution result
             create_text_message("assistant", "Based on the Prolog execution: {execution_result}"),
             # Final interpretation
-            create_text_message("assistant", "{interpretation}")
-        ]
+            create_text_message("assistant", "{interpretation}"),
+        ],
     )
 
 
@@ -61,17 +61,17 @@ def create_converter_prompt() -> MCPPrompt:
             types.PromptArgument(
                 name="question",
                 description="Question to convert to Prolog",
-                required=True
-            )
+                required=True,
+            ),
         ],
         messages=[
             # Instructions as assistant message
             create_text_message(
                 "assistant",
-                "I will convert your question into valid Prolog code with necessary facts and rules."
+                "I will convert your question into valid Prolog code with necessary facts and rules.",
             ),
-            create_text_message("user", "{question}")
-        ]
+            create_text_message("user", "{question}"),
+        ],
     )
 
 
@@ -85,28 +85,28 @@ def create_interpreter_prompt() -> MCPPrompt:
             types.PromptArgument(
                 name="question",
                 description="Original question",
-                required=True
+                required=True,
             ),
             types.PromptArgument(
                 name="prolog_code",
                 description="Generated Prolog code",
-                required=True
+                required=True,
             ),
             types.PromptArgument(
                 name="results",
                 description="Execution results",
-                required=True
-            )
+                required=True,
+            ),
         ],
         messages=[
             # Instructions as assistant message
             create_text_message(
                 "assistant",
-                "I will interpret the Prolog execution results in the context of your question."
+                "I will interpret the Prolog execution results in the context of your question.",
             ),
             create_text_message(
                 "user",
-                "Question: {question}\nProlog Code:\n{prolog_code}\nResults:\n{results}"
-            )
-        ]
+                "Question: {question}\nProlog Code:\n{prolog_code}\nResults:\n{results}",
+            ),
+        ],
     )

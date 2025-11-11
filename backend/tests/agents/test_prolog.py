@@ -2,10 +2,11 @@
 
 import pytest
 
+
 # Skip entire module if SWI-Prolog is not available
 try:
     import pyswip  # noqa: F401
-except Exception:
+except (ImportError, OSError, Exception):  # noqa: BLE001
     pytest.skip("SWI-Prolog not available", allow_module_level=True)
 
 from unittest.mock import AsyncMock, Mock
@@ -48,7 +49,7 @@ def mock_session():
     session.call_tool.return_value = {
         "success": True,
         "solutions": [{}],  # Empty solution means "Yes"
-        "error": None
+        "error": None,
     }
 
     return session
