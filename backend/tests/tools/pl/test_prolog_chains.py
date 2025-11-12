@@ -1,7 +1,7 @@
 """Tests for Prolog chain prompts."""
 
 import pytest
-from src.wolfai.tools.pl.prolog_chains import (
+from wolfai.tools.pl.prolog_chains import (
     create_prolog_chain_prompt,
     create_converter_prompt,
     create_interpreter_prompt

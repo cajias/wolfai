@@ -4,7 +4,7 @@ import logging
 import sys
 from typing import List, Optional
 
-from langchain.agents import initialize_agent, AgentType
+from langchain.agents import create_agent
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import HumanMessage, AIMessage
@@ -117,11 +117,11 @@ class PrologAgent:
                     logger.debug(f"Successfully retrieved {len(langchain_mcp_tools)} tools")
 
                     logger.debug("Initializing LangChain agent executor")
-                    self.agent_executor =  initialize_agent(
-                        tools=langchain_mcp_tools,  # ✅ Now using StructuredTool
-                        llm=self.model,
-                        agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-                        verbose=True
+                    self.agent_executor = create_agent(
+                        model=self.model,
+                        tools=langchain_mcp_tools,
+                        system_prompt="You are a helpful assistant that can reason using Prolog logic. Use the available tools to execute Prolog queries and provide logical reasoning.",
+                        debug=True
                     )
                     logger.debug("Agent executor initialized successfully")
         except Exception as e:
