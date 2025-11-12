@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, AsyncMock
 from mcp import ClientSession
-from src.wolfai.agents.prolog import PrologAgent
+from wolfai.agents.prolog import PrologAgent
 
 
 @pytest.fixture

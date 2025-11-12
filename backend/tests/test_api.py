@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from src.wolfai.api import app, _games
+from wolfai.api import app, _games
 
 
 def test_game_flow() -> None:

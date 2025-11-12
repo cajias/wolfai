@@ -2,7 +2,7 @@
 
 from mcp import types
 import pytest
-from src.wolfai.tools.mcp_utils import (
+from wolfai.tools.mcp_utils import (
     MCPPrompt,
     prompt,
     function_to_mcp_prompt,
