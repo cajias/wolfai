@@ -1,7 +1,8 @@
 """MCP prompt chain for natural language to Prolog reasoning."""
 
-from src.wolfai.tools.mcp_utils import MCPPrompt, prompt
 from mcp import types
+
+from src.wolfai.tools.mcp_utils import MCPPrompt, create_text_message, prompt
 
 
 @prompt(name="prolog-reasoning")
@@ -14,74 +15,38 @@ def create_prolog_chain_prompt() -> MCPPrompt:
             types.PromptArgument(
                 name="question",
                 description="Natural language question to answer",
-                required=True
-            )
+                required=True,
+            ),
         ],
         messages=[
             # Initial system instruction as assistant message
-            types.PromptMessage(
-                role="assistant",
-                content=types.TextContent(
-                    type="text",
-                    text="I will help answer questions by converting them to Prolog code and executing it."
-                )
+            create_text_message(
+                "assistant",
+                "I will help answer questions by converting them to Prolog code and executing it.",
             ),
             # Example interaction
-            types.PromptMessage(
-                role="user",
-                content=types.TextContent(
-                    type="text",
-                    text="If all humans are mortal and Socrates is human, is Socrates mortal?"
-                )
+            create_text_message(
+                "user",
+                "If all humans are mortal and Socrates is human, is Socrates mortal?",
             ),
-            types.PromptMessage(
-                role="assistant",
-                content=types.TextContent(
-                    type="text",
-                    text="Let me convert this to Prolog code:\n\nhuman(socrates).\nmortal(X) :- human(X).\n?- mortal(socrates)."
-                )
+            create_text_message(
+                "assistant",
+                "Let me convert this to Prolog code:\n\nhuman(socrates).\nmortal(X) :- human(X).\n?- mortal(socrates).",
             ),
             # Example execution result
-            types.PromptMessage(
-                role="assistant",
-                content=types.TextContent(
-                    type="text",
-                    text="The execution shows that Socrates is indeed mortal, as this follows from our rules."
-                )
+            create_text_message(
+                "assistant",
+                "The execution shows that Socrates is indeed mortal, as this follows from our rules.",
             ),
             # Handle the actual question
-            types.PromptMessage(
-                role="user",
-                content=types.TextContent(
-                    type="text",
-                    text="{question}"
-                )
-            ),
+            create_text_message("user", "{question}"),
             # Conversion result
-            types.PromptMessage(
-                role="assistant",
-                content=types.TextContent(
-                    type="text",
-                    text="I'll convert this to Prolog:\n\n{generated_prolog}"
-                )
-            ),
+            create_text_message("assistant", "I'll convert this to Prolog:\n\n{generated_prolog}"),
             # Execution result
-            types.PromptMessage(
-                role="assistant",
-                content=types.TextContent(
-                    type="text",
-                    text="Based on the Prolog execution: {execution_result}"
-                )
-            ),
+            create_text_message("assistant", "Based on the Prolog execution: {execution_result}"),
             # Final interpretation
-            types.PromptMessage(
-                role="assistant",
-                content=types.TextContent(
-                    type="text",
-                    text="{interpretation}"
-                )
-            )
-        ]
+            create_text_message("assistant", "{interpretation}"),
+        ],
     )
 
 
@@ -96,26 +61,17 @@ def create_converter_prompt() -> MCPPrompt:
             types.PromptArgument(
                 name="question",
                 description="Question to convert to Prolog",
-                required=True
-            )
+                required=True,
+            ),
         ],
         messages=[
             # Instructions as assistant message
-            types.PromptMessage(
-                role="assistant",
-                content=types.TextContent(
-                    type="text",
-                    text="I will convert your question into valid Prolog code with necessary facts and rules."
-                )
+            create_text_message(
+                "assistant",
+                "I will convert your question into valid Prolog code with necessary facts and rules.",
             ),
-            types.PromptMessage(
-                role="user",
-                content=types.TextContent(
-                    type="text",
-                    text="{question}"
-                )
-            )
-        ]
+            create_text_message("user", "{question}"),
+        ],
     )
 
 
@@ -129,34 +85,28 @@ def create_interpreter_prompt() -> MCPPrompt:
             types.PromptArgument(
                 name="question",
                 description="Original question",
-                required=True
+                required=True,
             ),
             types.PromptArgument(
                 name="prolog_code",
                 description="Generated Prolog code",
-                required=True
+                required=True,
             ),
             types.PromptArgument(
                 name="results",
                 description="Execution results",
-                required=True
-            )
+                required=True,
+            ),
         ],
         messages=[
             # Instructions as assistant message
-            types.PromptMessage(
-                role="assistant",
-                content=types.TextContent(
-                    type="text",
-                    text="I will interpret the Prolog execution results in the context of your question."
-                )
+            create_text_message(
+                "assistant",
+                "I will interpret the Prolog execution results in the context of your question.",
             ),
-            types.PromptMessage(
-                role="user",
-                content=types.TextContent(
-                    type="text",
-                    text="Question: {question}\nProlog Code:\n{prolog_code}\nResults:\n{results}"
-                )
-            )
-        ]
+            create_text_message(
+                "user",
+                "Question: {question}\nProlog Code:\n{prolog_code}\nResults:\n{results}",
+            ),
+        ],
     )

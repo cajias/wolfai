@@ -1,15 +1,17 @@
 """Tests for MCP utility functions that generate tools from Python code."""
 
 import inspect
-from typing import List, Optional, Dict, Any
-from datetime import datetime, date
+from datetime import date, datetime
+from typing import Any, Optional
+
 import pytest
+
 from wolfai.tools.mcp_utils import (
     function_to_mcp_tool,
+    generate_example_value,
     generate_tools_from_module,
     get_parameter_schema,
     get_type_validation_rules,
-    generate_example_value
 )
 
 
@@ -25,20 +27,20 @@ def simple_function(x: int, y: str = "default") -> str:
 
 
 def complex_function(
-    items: List[Dict[str, Any]],
+    items: list[dict[str, Any]],
     filter_by: Optional[str] = None,
     limit: int = 10,
-    created_at: datetime = None,
-    active_date: date = None
-) -> List[Dict[str, Any]]:
-    """A function with more complex types.
+    created_at: Optional[datetime] = None,
+    active_date: Optional[date] = None,
+) -> list[dict[str, Any]]:
+    """A function with more complex types for testing MCP utils type handling.
 
     Args:
-        items: List of dictionaries to process
-        filter_by: Optional filter key
-        limit: Maximum items to return
-        created_at: Timestamp of creation
-        active_date: Date of activation
+        items: List of dictionaries to process (unused - for type testing)
+        filter_by: Optional filter key (unused - for type testing)
+        limit: Maximum items to return (unused - for type testing)
+        created_at: Timestamp of creation (unused - for type testing)
+        active_date: Date of activation (unused - for type testing)
     """
     return []
 
@@ -46,13 +48,13 @@ def complex_function(
 class TestTypeConversion:
     """Test type conversion and validation rules."""
 
-    @pytest.mark.parametrize("py_type,expected_type,expected_format", [
+    @pytest.mark.parametrize(("py_type", "expected_type", "expected_format"), [
         (str, "string", None),
         (int, "number", "integer"),
         (float, "number", None),
         (bool, "boolean", None),
         (datetime, "string", "date-time"),
-        (date, "string", "date")
+        (date, "string", "date"),
     ])
     def test_type_validation_rules(self, py_type, expected_type, expected_format):
         """Test generation of type validation rules."""
@@ -63,14 +65,14 @@ class TestTypeConversion:
 
     def test_list_validation_rules(self):
         """Test validation rules for List types."""
-        rules = get_type_validation_rules(List[int])
+        rules = get_type_validation_rules(list[int])
         assert rules["type"] == "array"
         assert rules["items"]["type"] == "number"
         assert rules["items"]["format"] == "integer"
 
     def test_dict_validation_rules(self):
         """Test validation rules for Dict types."""
-        rules = get_type_validation_rules(Dict[str, int])
+        rules = get_type_validation_rules(dict[str, int])
         assert rules["type"] == "object"
         assert rules["additionalProperties"]["type"] == "number"
         assert rules["additionalProperties"]["format"] == "integer"
@@ -79,7 +81,7 @@ class TestTypeConversion:
 class TestExampleGeneration:
     """Test example value generation for different types."""
 
-    @pytest.mark.parametrize("py_type,expected", [
+    @pytest.mark.parametrize(("py_type", "expected"), [
         (str, "example_text"),
         (int, 42),
         (float, 3.14),
@@ -93,14 +95,14 @@ class TestExampleGeneration:
 
     def test_list_example_generation(self):
         """Test example generation for List types."""
-        assert generate_example_value(List[int]) == [42]
-        assert generate_example_value(List[str]) == ["example_text"]
+        assert generate_example_value(list[int]) == [42]
+        assert generate_example_value(list[str]) == ["example_text"]
 
     def test_dict_example_generation(self):
         """Test example generation for Dict types."""
-        example = generate_example_value(Dict[str, int])
+        example = generate_example_value(dict[str, int])
         assert isinstance(example, dict)
-        assert list(example.values())[0] == 42
+        assert next(iter(example.values())) == 42
 
     def test_optional_example_generation(self):
         """Test example generation for Optional types."""
@@ -115,7 +117,7 @@ class TestParameterSchema:
         param = inspect.Parameter(
             "test",
             inspect.Parameter.POSITIONAL_OR_KEYWORD,
-            annotation=int
+            annotation=int,
         )
         schema = get_parameter_schema(param)
         assert schema["type"] == "number"
@@ -129,7 +131,7 @@ class TestParameterSchema:
             "test",
             inspect.Parameter.POSITIONAL_OR_KEYWORD,
             annotation=Optional[str],
-            default=None
+            default=None,
         )
         schema = get_parameter_schema(param)
         assert "description" in schema
@@ -141,7 +143,7 @@ class TestParameterSchema:
         param = inspect.Parameter(
             "timestamp",
             inspect.Parameter.POSITIONAL_OR_KEYWORD,
-            annotation=datetime
+            annotation=datetime,
         )
         schema = get_parameter_schema(param)
         assert schema["type"] == "string"
@@ -200,43 +202,43 @@ class TestModuleTools:
 
     def test_exclude_private_functions(self):
         """Test that private functions are excluded by default."""
-        module = type('TestModule', (), {
-            'public_func': lambda: None,
-            '_private_func': lambda: None,
+        module = type("TestModule", (), {
+            "public_func": lambda: None,
+            "_private_func": lambda: None,
         })
 
         tools = generate_tools_from_module(module)
         names = [t.name for t in tools]
 
-        assert 'public_func' in names
-        assert '_private_func' not in names
+        assert "public_func" in names
+        assert "_private_func" not in names
 
     def test_include_private_functions(self):
         """Test including private functions when specified."""
-        module = type('TestModule', (), {
-            'public_func': lambda: None,
-            '_private_func': lambda: None,
+        module = type("TestModule", (), {
+            "public_func": lambda: None,
+            "_private_func": lambda: None,
         })
 
         tools = generate_tools_from_module(module, include_private=True)
         names = [t.name for t in tools]
 
-        assert '_private_func' in names
+        assert "_private_func" in names
 
     def test_exclude_specific_functions(self):
         """Test excluding specific functions."""
-        module = type('TestModule', (), {
-            'func1': lambda: None,
-            'func2': lambda: None,
-            'func3': lambda: None,
+        module = type("TestModule", (), {
+            "func1": lambda: None,
+            "func2": lambda: None,
+            "func3": lambda: None,
         })
 
-        tools = generate_tools_from_module(module, exclude=['func2'])
+        tools = generate_tools_from_module(module, exclude=["func2"])
         names = [t.name for t in tools]
 
-        assert 'func1' in names
-        assert 'func2' not in names
-        assert 'func3' in names
+        assert "func1" in names
+        assert "func2" not in names
+        assert "func3" in names
 
 
 class TestErrorHandling:
@@ -244,7 +246,7 @@ class TestErrorHandling:
 
     def test_invalid_function(self):
         """Test handling functions that can't be converted to tools."""
-        def bad_function(*args, **kwargs):
+        def bad_function(*args: Any, **kwargs: Any) -> None:
             pass
 
         tool = function_to_mcp_tool(bad_function)
@@ -253,7 +255,7 @@ class TestErrorHandling:
 
     def test_missing_docstring(self):
         """Test handling functions without docstrings."""
-        def no_doc(x: int):
+        def no_doc(x: int) -> None:
             pass
 
         tool = function_to_mcp_tool(no_doc)
@@ -262,9 +264,8 @@ class TestErrorHandling:
 
     def test_missing_type_hints(self):
         """Test handling functions without type hints."""
-        def no_types(x, y="default"):
+        def no_types(x, y="default") -> None:
             """Function without type hints."""
-            pass
 
         tool = function_to_mcp_tool(no_types)
         assert tool.inputSchema["properties"]["x"]["type"] == "string"  # Default to string

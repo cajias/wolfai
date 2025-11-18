@@ -1,10 +1,14 @@
+"""Utilities to convert MCP tools to LangChain StructuredTools."""
+
 import asyncio
 import logging
-from typing import Type, Any, Dict
+from typing import Any
 
 from langchain_core.tools import StructuredTool
-from mcp import ClientSession, types as mcp_types
+from mcp import ClientSession
+from mcp import types as mcp_types
 from pydantic import BaseModel, create_model
+
 
 class RunQueryInput(BaseModel):
     """Schema for run_query tool input."""
@@ -27,17 +31,17 @@ async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredT
     """Fetch MCP tools and convert them to LangChain StructuredTools."""
     tools = await session.list_tools()
 
-    def create_tool(tool: mcp_types.Tool):
+    def create_tool(tool: mcp_types.Tool) -> StructuredTool:
 
         # Use **kwargs so the function accepts any named args (e.g. prolog=..., query=...)
         async def tool_function_sync(*args: Any, **kwargs: Any) -> mcp_types.CallToolResult:
-            """
-            A synchronous function that:
-              - Accepts unlimited positional args (*args)
-              - Accepts unlimited keyword args (**kwargs)
-              - Merges them into a final dictionary
-              - Uses the tool's schema to decide how to handle the positional args
-              - Calls an async function with asyncio.run()
+            """A synchronous function that wraps MCP tool invocation.
+
+            - Accepts unlimited positional args (*args)
+            - Accepts unlimited keyword args (**kwargs)
+            - Merges them into a final dictionary
+            - Uses the tool's schema to decide how to handle the positional args
+            - Calls an async function with asyncio.run().
 
             Returns:
               The result of calling the MCP tool with the merged arguments.
@@ -48,8 +52,7 @@ async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredT
             # Start with the named (keyword) arguments
             final_args = await _parse_variadic_args(args, kwargs, props, required_fields)
 
-            result = asyncio.run(session.call_tool(tool.name, final_args)).result()
-            return result
+            return asyncio.run(session.call_tool(tool.name, final_args)).result()
 
         dynamic_tool_schema = _as_pydantic(f"{tool.name.capitalize()}ToolSchema", dict(tool.inputSchema["properties"]))
         return StructuredTool(
@@ -63,8 +66,13 @@ async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredT
     return [t for t in structured_tools if t is not None]
 
 
-async def _parse_variadic_args(args, kwargs, props, required_fields):
-    final_args = {k: v for k, v in kwargs.items()}
+async def _parse_variadic_args(
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    props: dict[str, Any],
+    required_fields: list[str],
+) -> dict[str, Any]:
+    final_args = dict(kwargs.items())
     # If the user provided positional arguments, decide how to handle them:
     if args:
         # 1) If there's exactly one required field in the schema, store *args under that field
@@ -73,7 +81,7 @@ async def _parse_variadic_args(args, kwargs, props, required_fields):
 
             # If that field is not in 'props', fallback or just assume it
             if field_name not in props:
-                logging.warning(f"Field '{field_name}' not found in properties. Using anyway.")
+                logging.warning("Field '%s' not found in properties. Using anyway.", field_name)
 
             # If there's exactly one positional argument, store it directly
             # If there's multiple, store them as a list, or handle them differently
@@ -104,11 +112,11 @@ JSON_TYPE_MAPPING = {
     "number": float,
     "boolean": bool,
     "array": list,
-    "object": dict
+    "object": dict,
 }
 
 
-def _as_pydantic(name: str, schema: Dict[str, Any]) -> Type[BaseModel]:
+def _as_pydantic(name: str, schema: dict[str, Any]) -> type[BaseModel]:
     """Dynamically creates a Pydantic model class from a dictionary schema, supporting multiple types."""
     fields = {}
 

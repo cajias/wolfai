@@ -2,11 +2,12 @@
 import inspect
 import typing
 from dataclasses import dataclass
-from datetime import datetime, date
-from typing import Any, Callable, Dict, List, Optional, get_origin, get_args
+from datetime import date, datetime
+from typing import Any, Callable, Optional, get_args, get_origin
 
 import docstring_parser
 from mcp import types
+
 
 PAIR_LENGTH = 2
 
@@ -16,8 +17,27 @@ class MCPPrompt:
     """Container for MCP prompt definition with messages."""
     name: str
     description: str
-    arguments: List[types.PromptArgument]
-    messages: List[types.PromptMessage]
+    arguments: list[types.PromptArgument]
+    messages: list[types.PromptMessage]
+
+
+def create_text_message(role: str, text: str) -> types.PromptMessage:
+    """Create a PromptMessage with text content.
+
+    Args:
+        role: Message role ("user", "assistant", or "system")
+        text: Text content of the message
+
+    Returns:
+        PromptMessage with TextContent
+    """
+    return types.PromptMessage(
+        role=role,
+        content=types.TextContent(
+            type="text",
+            text=text,
+        ),
+    )
 
 
 def generate_example_value(annotation: Any) -> Any:
@@ -53,9 +73,8 @@ def generate_example_value(annotation: Any) -> Any:
     return "example_value"
 
 
-def get_type_validation_rules(annotation: Any) -> Dict[str, Any]:
+def get_type_validation_rules(annotation: Any) -> dict[str, Any]:
     """Extract validation rules from type hints."""
-
     # Mapping of basic types to JSON schema
     type_mapping = {
         int: {"type": "number", "format": "integer"},
@@ -69,6 +88,14 @@ def get_type_validation_rules(annotation: Any) -> Dict[str, Any]:
     # Return basic type schema if available
     if annotation in type_mapping:
         return type_mapping[annotation]
+
+    # Handle Optional types (Union[T, None])
+    if get_origin(annotation) is typing.Union:
+        # Get non-None types from the Union
+        non_none_args = [arg for arg in get_args(annotation) if arg is not type(None)]
+        if non_none_args:
+            # For Optional[T], use the schema for T
+            return get_type_validation_rules(non_none_args[0])
 
     # Handle List types
     if get_origin(annotation) is list:
@@ -84,10 +111,9 @@ def get_type_validation_rules(annotation: Any) -> Dict[str, Any]:
 
 def get_parameter_schema(
     param: inspect.Parameter,
-    param_doc: Optional[docstring_parser.DocstringParam] = None
-) -> Dict[str, Any]:
-    """
-    Extract comprehensive JSON schema information from a parameter.
+    param_doc: Optional[docstring_parser.DocstringParam] = None,
+) -> dict[str, Any]:
+    """Extract comprehensive JSON schema information from a parameter.
 
     Args:
         param: Parameter to analyze
@@ -124,12 +150,12 @@ def get_parameter_schema(
         if param.default is None:
             descriptions.append("Defaults to None if not provided.")
         else:
-            descriptions.append(f"Defaults to {repr(param.default)} if not provided.")
+            descriptions.append(f"Defaults to {param.default!r} if not provided.")
     else:
         descriptions.append("This parameter is required.")
 
     # Add example usage
-    descriptions.append(f"Example value: {repr(example)}")
+    descriptions.append(f"Example value: {example!r}")
 
     schema["description"] = " ".join(descriptions)
 
@@ -144,8 +170,7 @@ def get_parameter_schema(
 
 
 def function_to_mcp_tool(func: Callable, name: Optional[str] = None) -> types.Tool:
-    """
-    Convert a Python function to an MCP tool using type hints and docstrings.
+    """Convert a Python function to an MCP tool using type hints and docstrings.
 
     Args:
         func: The function to convert
@@ -202,8 +227,7 @@ def function_to_mcp_tool(func: Callable, name: Optional[str] = None) -> types.To
     # Add example if available
     if doc.examples:
         descriptions.append("Examples:")
-        for example in doc.examples:
-            descriptions.append(example.description)
+        descriptions.extend(example.description for example in doc.examples)
 
     # Create MCP tool
     tool_name = name or func.__name__
@@ -218,8 +242,8 @@ def generate_tools_from_module(
     module: Any,
     *,
     include_private: bool = False,
-    exclude: Optional[List[str]] = None,
-) -> List[types.Tool]:
+    exclude: Optional[list[str]] = None,
+) -> list[types.Tool]:
     """Generate MCP tools from all callable objects in a module.
 
     Args:
@@ -230,8 +254,7 @@ def generate_tools_from_module(
     Returns:
         A list of generated Tool objects.
     """
-
-    tools: List[types.Tool] = []
+    tools: list[types.Tool] = []
     exclude = set(exclude or [])
 
     for attr_name in dir(module):
@@ -244,15 +267,15 @@ def generate_tools_from_module(
         if callable(attr):
             try:
                 tools.append(function_to_mcp_tool(attr, name=attr_name))
-            except Exception:
+            except Exception:  # noqa: BLE001
+                # Skip functions that can't be converted to tools (invalid signatures, missing annotations, etc.)
                 continue
 
     return tools
 
 
 def function_to_mcp_prompt(func: Callable) -> types.Prompt:
-    """
-    Convert a Python function to an MCP prompt using type hints and docstrings.
+    """Convert a Python function to an MCP prompt using type hints and docstrings.
 
     Args:
         func: Function that returns an MCPPrompt
@@ -266,7 +289,8 @@ def function_to_mcp_prompt(func: Callable) -> types.Prompt:
     # Execute function to get MCPPrompt definition
     prompt_def = func()
     if not isinstance(prompt_def, MCPPrompt):
-        raise ValueError(f"Function {func.__name__} must return MCPPrompt")
+        msg = f"Function {func.__name__} must return MCPPrompt"
+        raise ValueError(msg)
 
     # Build arguments from both signature and docstring
     arguments = []
@@ -280,20 +304,19 @@ def function_to_mcp_prompt(func: Callable) -> types.Prompt:
         argument = types.PromptArgument(
             name=param_name,
             description=param_doc.description if param_doc else "",
-            required=param.default == inspect.Parameter.empty
+            required=param.default == inspect.Parameter.empty,
         )
         arguments.append(argument)
 
     return types.Prompt(
         name=prompt_def.name or func.__name__,
         description=doc.short_description or "",
-        arguments=arguments
+        arguments=arguments,
     )
 
 
-def prompt(func: Optional[Callable] = None, *, name: Optional[str] = None):
-    """
-    Decorator to mark and configure functions as MCP prompts.
+def prompt(func: Optional[Callable] = None, *, name: Optional[str] = None) -> Callable:
+    """Decorator to mark and configure functions as MCP prompts.
 
     Can be used as @prompt or @prompt(name="custom_name")
     """
@@ -308,9 +331,8 @@ def prompt(func: Optional[Callable] = None, *, name: Optional[str] = None):
         return decorator
     return decorator(func)
 
-def tool(func: Optional[Callable] = None, *, name: Optional[str] = None):
-    """
-    Decorator to mark and configure functions as MCP tool.
+def tool(func: Optional[Callable] = None, *, name: Optional[str] = None) -> Callable:
+    """Decorator to mark and configure functions as MCP tool.
 
     Can be used as @tool or @prompt(name="custom_name")
     """
@@ -329,11 +351,9 @@ def tool(func: Optional[Callable] = None, *, name: Optional[str] = None):
 def generate_prompts_from_module(
     module: Any,
     include_private: bool = False,
-    exclude: Optional[List[str]] = None
-) -> List[types.Prompt]:
-    """
-    Generate MCP prompts from all suitable functions in a module.
-    """
+    exclude: Optional[list[str]] = None,
+) -> list[types.Prompt]:
+    """Generate MCP prompts from all suitable functions in a module."""
     exclude = exclude or []
     prompts = []
 
@@ -343,7 +363,7 @@ def generate_prompts_from_module(
             continue
 
         # Skip private functions unless explicitly included
-        if not include_private and name.startswith('_'):
+        if not include_private and name.startswith("_"):
             continue
 
         # Check if it's a prompt function (either by decorator or return type)
@@ -353,40 +373,44 @@ def generate_prompts_from_module(
         try:
             prompt = function_to_mcp_prompt(obj)
             # Override name if specified in decorator
-            if hasattr(obj, '_mcp_prompt_name'):
+            if hasattr(obj, "_mcp_prompt_name"):
                 prompt.name = obj._mcp_prompt_name
             prompts.append(prompt)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            # Skip prompts that can't be converted (invalid signatures, missing annotations, etc.)
             print(f"Warning: Could not convert {name} to prompt: {e}")
 
     return prompts
 
 
-def is_mp_prompt_type(obj):
-    is_prompt = (
-        hasattr(obj, '_is_mcp_prompt') or
+def is_mp_prompt_type(obj: Any) -> bool:
+    """Check if an object is an MCP prompt type."""
+    return (
+        hasattr(obj, "_is_mcp_prompt") or
         (inspect.isfunction(obj) and
-         obj.__annotations__.get('return') == MCPPrompt)
+         obj.__annotations__.get("return") == MCPPrompt)
     )
-    return is_prompt
 
-def is_mp_tool_type(obj):
-    is_tool = (
-        hasattr(obj, '_is_mcp_tool') or
-        (inspect.isfunction(obj) and obj.__annotations__.get('return') != MCPPrompt)
+def is_mp_tool_type(obj: Any) -> bool:
+    """Check if an object is an MCP tool type."""
+    return (
+        hasattr(obj, "_is_mcp_tool") or
+        (inspect.isfunction(obj) and obj.__annotations__.get("return") != MCPPrompt)
     )
-    return is_tool
 
 
 def generate_from_module(
     module: Any,
-    include_private: bool = False,
-    exclude: Optional[List[str]] = None
-) -> tuple[List[types.Tool], List[types.Prompt]]:
-    """
-    Generate both MCP tools and prompts from a module.
-    """
+    _include_private: bool = False,
+    _exclude: Optional[list[str]] = None,
+) -> tuple[list[types.Tool], list[types.Prompt]]:
+    """Generate both MCP tools and prompts from a module.
 
+    Args:
+        module: Module to extract tools and prompts from
+        _include_private: Reserved for future use
+        _exclude: Reserved for future use
+    """
     tools = [function_to_mcp_tool(obj) for _, obj in inspect.getmembers(module, is_mp_tool_type)]
     prompts = [function_to_mcp_prompt(obj) for _, obj in inspect.getmembers(module, is_mp_prompt_type)]
     return tools, prompts
