@@ -20,6 +20,6 @@ async def invoke_agent_with_retry(agent_executor: Any, query: dict[str, Any]) ->
         if "messages" in result:
             # Get the last message which should be the assistant's response
             last_message = result["messages"][-1]
-            return {"output": last_message.content if hasattr(last_message, 'content') else str(last_message)}
+            return {"output": last_message.content if hasattr(last_message, "content") else str(last_message)}
         return {"output": str(result)}
     return await agent_executor.ainvoke(query)

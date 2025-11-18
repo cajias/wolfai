@@ -107,18 +107,9 @@ class PrologAgent:
                     langchain_mcp_tools = await get_mcp_tools_as_langchain(session)
                     logger.debug("Successfully retrieved %d tools", len(langchain_mcp_tools))
 
-<<<<<<< HEAD
-                    logger.debug("Initializing LangChain agent executor")
-                    self.agent_executor = create_agent(
-                        model=self.model,
-                        tools=langchain_mcp_tools,
-                        system_prompt="You are a helpful assistant that can reason using Prolog logic. Use the available tools to execute Prolog queries and provide logical reasoning.",
-                        debug=True
-=======
                     msg = (
                         "PrologAgent requires migration from deprecated initialize_agent to LangChain 1.0+ API. "
                         "See: https://python.langchain.com/docs/how_to/migrate_agent/"
->>>>>>> origin/main
                     )
                     raise NotImplementedError(
                         msg,
