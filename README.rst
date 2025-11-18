@@ -21,6 +21,15 @@ The system consists of several key components working together to enable intelli
 - **Probability Models**: Bayesian Inference, HMMs, Kalman Filters, and POMDPs allow the AI to update and refine its beliefs.
 
 
+Repository Layout
+=================
+
+This project uses a monorepo structure with separate top-level packages:
+
+- ``backend/`` – Python application code, tests, and build configuration.
+- ``frontend/`` – Web client assets and build tooling.
+
+
 System Architecture
 ===================
 
@@ -84,7 +93,10 @@ This structured decision-making pipeline enables the AI to behave as an **autono
 Installation
 ============
 
-To run this system, install the following dependencies:
+Backend Setup
+------------
+
+To install the backend Python package:
 
 .. code-block:: bash
 
@@ -92,11 +104,27 @@ To run this system, install the following dependencies:
     python -m venv venv
     source venv/bin/activate
 
-    # Install dependencies
-    pip install -r requirements.txt
+    # Navigate to backend directory
+    cd backend/
 
-    # Install development dependencies (optional)
-    pip install -r requirements_dev.txt
+    # Install the package with dependencies
+    pip install -e .
+
+    # Install development dependencies (optional, for testing)
+    pip install -e ".[dev]"
+
+System Dependencies
+------------------
+
+For Prolog integration functionality, install SWI-Prolog:
+
+.. code-block:: bash
+
+    # Ubuntu/Debian
+    sudo apt-get install swi-prolog
+
+    # macOS
+    brew install swi-prolog
 
 
 Components
@@ -132,14 +160,35 @@ To run the test suite:
 
 .. code-block:: bash
 
-    # Run all tests
-    pytest
+    # Navigate to backend directory
+    cd backend/
+
+    # Install the package with development dependencies
+    pip install -e ".[dev]"
+
+    # Run all tests (excluding SWI-Prolog dependent tests)
+    pytest tests --ignore=tests/tools/pl/test_prolog.py \
+                 --ignore=tests/tools/pl/test_prolog_chains.py \
+                 --ignore=tests/tools/pl/test_prolog_chain_integration.py
 
     # Run specific test file
-    pytest tests/agents/test_prolog.py
+    pytest tests/test_api.py
 
     # Run with coverage
-    pytest --cov=src/wolfai
+    pytest --cov=wolfai tests/
+
+**Note:** Some tests require SWI-Prolog to be installed on your system:
+
+.. code-block:: bash
+
+    # Ubuntu/Debian
+    sudo apt-get install swi-prolog
+
+    # macOS
+    brew install swi-prolog
+
+    # After installing SWI-Prolog, you can run all tests:
+    pytest tests/
 
 
 Project Structure
