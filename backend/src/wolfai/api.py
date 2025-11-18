@@ -1,4 +1,4 @@
-"""FastAPI endpoints for the WolfAI Werewolf game server."""
+"""FastAPI REST and WebSocket endpoints for Werewolf game."""
 
 from __future__ import annotations
 
@@ -101,7 +101,8 @@ async def _broadcast(game_id: str) -> None:
     for ws in list(_connections.get(game_id, [])):
         try:
             await ws.send_json(GameState(**arena.public_view()).model_dump())
-        except Exception:
+        except (WebSocketDisconnect, RuntimeError):
+            # Remove disconnected WebSocket clients
             _connections[game_id].remove(ws)
 
 

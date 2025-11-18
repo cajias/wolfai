@@ -1,7 +1,7 @@
 """LangGraph agent for Prolog reasoning."""
+import asyncio
+from typing import Optional
 
-# TODO: Fix deprecated import - initialize_agent and AgentType are deprecated in LangChain 1.0+
-# from langchain.agents import initialize_agent, AgentType
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
@@ -107,15 +107,6 @@ class PrologAgent:
                     langchain_mcp_tools = await get_mcp_tools_as_langchain(session)
                     logger.debug("Successfully retrieved %d tools", len(langchain_mcp_tools))
 
-                    # TODO: Fix deprecated initialize_agent usage - use create_react_agent or similar
-                    # logger.debug("Initializing LangChain agent executor")
-                    # self.agent_executor =  initialize_agent(
-                    #     tools=langchain_mcp_tools,  # ✅ Now using StructuredTool
-                    #     llm=self.model,
-                    #     agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-                    #     verbose=True
-                    # )
-                    # logger.debug("Agent executor initialized successfully")
                     msg = (
                         "PrologAgent requires migration from deprecated initialize_agent to LangChain 1.0+ API. "
                         "See: https://python.langchain.com/docs/how_to/migrate_agent/"
@@ -123,14 +114,14 @@ class PrologAgent:
                     raise NotImplementedError(
                         msg,
                     )
-        except Exception as e:
-            logger.exception("Error during Prolog agent initialization: %s", e)
+        except Exception:
+            logger.exception("Error during Prolog agent initialization")
             raise
 
     async def __call__(
         self,
         messages: list[BaseMessage],
-        config: RunnableConfig | None = None,
+        _config: Optional[RunnableConfig] = None,
     ) -> AIMessage:
         """Process a sequence of messages and generate a Prolog reasoning-powered AI response.
 
@@ -182,7 +173,7 @@ class PrologAgent:
                 logger.warning("Received non-human message, returning a default response")
                 return AIMessage(content="Expected a question from a human.")
 
-            logger.debug("Processing last message: %s...", str(last_message.content)[:100])
+            logger.debug("Processing last message: %s...", last_message.content[:100])
 
             # Get response from model with tools
             logger.debug("Invoking model with processed message")
@@ -190,10 +181,10 @@ class PrologAgent:
                 response = await invoke_agent_with_retry(self.agent_executor, last_message.content)
                 logger.debug("Response from model successfully received")
                 return AIMessage(content=response["output"])
-            except TimeoutError:
+            except asyncio.TimeoutError:
                 logger.exception("Timeout occurred during model response generation")
                 return AIMessage(content="I apologize, but the operation timed out. Please try again.")
 
         except Exception as e:
-            logger.exception("Unexpected error in agent call: %s", e)
+            logger.exception("Unexpected error in agent call")
             return AIMessage(content=f"I encountered an error: {e!s}")

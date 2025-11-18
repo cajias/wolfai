@@ -18,8 +18,9 @@ Key features:
 
 import contextlib
 import uuid
+from collections.abc import Generator
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 from pyswip import Prolog
 
@@ -39,7 +40,7 @@ class PrologState:
         query: Optional string containing the last executed query, if any
     """
     facts: list[str]  # Each fact/rule as a string
-    query: str | None = None
+    query: Optional[str] = None
 
 
 @dataclass
@@ -57,11 +58,11 @@ class PrologResult:
     """
     success: bool
     solutions: list[dict[str, Any]]
-    error: str | None = None
+    error: Optional[str] = None
 
 
 @contextlib.contextmanager
-def _temporary_prolog_env():
+def _temporary_prolog_env() -> Generator[tuple[Prolog, str], None, None]:
     """Create an isolated Prolog environment for safe query execution.
 
     This context manager ensures that each query execution happens in a fresh,
@@ -121,8 +122,8 @@ def _namespace_predicate(pred: str, namespace: str) -> str:
         head = _namespace_predicate(head.strip(), namespace)
         # Namespace each predicate in the body, but not built-ins
         body_parts = []
-        for part in body.split(","):
-            part = part.strip()
+        for raw_part in body.split(","):
+            part = raw_part.strip()
             if "(" in part:  # Only namespace predicates, not built-ins
                 body_parts.append(_namespace_predicate(part, namespace))
             else:
@@ -159,8 +160,8 @@ def parse_prolog_code(code: str) -> list[str]:
     lines = []
     current = []
 
-    for line in code.split("\n"):
-        line = line.strip()
+    for raw_line in code.split("\n"):
+        line = raw_line.strip()
         if not line or line.startswith("%"):
             continue
 
@@ -177,7 +178,7 @@ def parse_prolog_code(code: str) -> list[str]:
     return lines
 
 
-def _load_facts(prolog: Prolog, facts: list[str], namespace: str) -> str | None:
+def _load_facts(prolog: Prolog, facts: list[str], namespace: str) -> Optional[str]:
     """Load facts and rules into a Prolog environment with proper namespacing.
 
     This function:
@@ -204,19 +205,21 @@ def _load_facts(prolog: Prolog, facts: list[str], namespace: str) -> str | None:
         seen_predicates, arity_map = _analyze_predicates(facts)
         _declare_predicates(prolog, namespace, seen_predicates, arity_map)
 
-        for fact in facts:
-            fact = fact.strip()
+        for raw_fact in facts:
+            fact = raw_fact.strip()
             if not fact or fact.startswith("%"):
                 continue
 
             if fact.endswith("."):
                 fact = fact[:-1]
 
-            fact = _namespace_predicate(fact, namespace)
-            list(prolog.query(f"asserta(({fact}))"))
+            namespaced_fact = _namespace_predicate(fact, namespace)
+            list(prolog.query(f"asserta(({namespaced_fact}))"))
 
         return None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        # Broad exception catch is intentional: pyswip can raise various exceptions
+        # from the Prolog engine that aren't well-defined in the public API
         return str(e)
 
 
@@ -227,17 +230,16 @@ def _analyze_predicates(facts: list[str]) -> tuple[set[str], dict[str, int]]:
     """Analyze predicates and determine arity for each."""
     seen_predicates: set[str] = set()
     arity_map: dict[str, int] = {}
-    for fact in facts:
-        original = fact
-        if fact.endswith("."):
-            fact = fact[:-1]
+    for raw_fact in facts:
+        original = raw_fact
+        fact = raw_fact[:-1] if raw_fact.endswith(".") else raw_fact
         if ":-" in fact:
             head = fact[:fact.index("(")]
             arity = fact.count(",") + 1 if "(" in fact else 0
             seen_predicates.add(head)
             arity_map[head] = arity
-            for part in original.split(":-")[1].split(","):
-                part = part.strip()
+            for raw_part in original.split(":-")[1].split(","):
+                part = raw_part.strip()
                 if "(" in part:
                     pred = part[:part.index("(")]
                     arity = part.count(",") + 1
@@ -305,7 +307,8 @@ def run_query(prolog: Prolog, query: str, namespace: str) -> PrologResult:
                 solutions.append(solution)
 
         return PrologResult(success=True, solutions=solutions)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        # Broad exception catch is intentional: pyswip can raise various Prolog execution errors
         # Extract meaningful part of error message
         error_msg = str(e)
         if "Caused by" in error_msg:

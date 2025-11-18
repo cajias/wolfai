@@ -1,5 +1,4 @@
-"""
-Step definitions for Cucumber/BDD e2e tests using pytest-bdd.
+"""Step definitions for Cucumber/BDD e2e tests using pytest-bdd.
 
 This module implements all step definitions for the werewolf game feature files.
 """
@@ -7,14 +6,17 @@ This module implements all step definitions for the werewolf game feature files.
 from __future__ import annotations
 
 from contextlib import suppress
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
+from wolfai import api
 from wolfai.api import app
+from wolfai.arena import Role
+
 
 # Load all feature files
 scenarios("features/game_lifecycle.feature")
@@ -30,7 +32,7 @@ scenarios("features/role_based_gameplay.feature")
 
 
 @pytest.fixture
-def context() -> Dict[str, Any]:
+def context() -> dict[str, Any]:
     """Shared context for storing test data between steps."""
     return {
         "games": {},
@@ -64,9 +66,7 @@ def api_server_running(client: TestClient) -> None:
     # Clear any existing games
     app.state.__dict__.pop("_games", None)
     app.state.__dict__.pop("_connections", None)
-    # Import and clear the module-level dictionaries
-    from wolfai import api
-
+    # Clear the module-level dictionaries
     api._games.clear()
     api._connections.clear()
 
@@ -74,8 +74,6 @@ def api_server_running(client: TestClient) -> None:
 @given("no games are currently active")
 def no_active_games(client: TestClient) -> None:
     """Ensure the games list is empty."""
-    from wolfai import api
-
     api._games.clear()
     api._connections.clear()
     response = client.get("/games")
@@ -89,7 +87,7 @@ def no_active_games(client: TestClient) -> None:
 
 
 @when("I create a new game")
-def create_new_game(client: TestClient, context: Dict[str, Any]) -> None:
+def create_new_game(client: TestClient, context: dict[str, Any]) -> None:
     """Create a single new game."""
     response = client.post("/new-game")
     context["last_response"] = response
@@ -100,14 +98,14 @@ def create_new_game(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @given("I create a new game")
-def given_create_new_game(client: TestClient, context: Dict[str, Any]) -> None:
+def given_create_new_game(client: TestClient, context: dict[str, Any]) -> None:
     """Create a new game in given step."""
     create_new_game(client, context)
 
 
 @when(parsers.parse("I create {count:d} new games"))
 def create_multiple_games(
-    client: TestClient, context: Dict[str, Any], count: int
+    client: TestClient, context: dict[str, Any], count: int,
 ) -> None:
     """Create multiple games."""
     game_ids = []
@@ -122,7 +120,7 @@ def create_multiple_games(
 
 
 @when("I create 10 games simultaneously")
-def create_games_simultaneously(client: TestClient, context: Dict[str, Any]) -> None:
+def create_games_simultaneously(client: TestClient, context: dict[str, Any]) -> None:
     """Create multiple games (simulated concurrency with sequential calls)."""
     game_ids = []
     responses = []
@@ -137,15 +135,14 @@ def create_games_simultaneously(client: TestClient, context: Dict[str, Any]) -> 
 
 @when(parsers.parse("I create {count:d} new games named:"))
 def create_named_games(
-    client: TestClient, context: Dict[str, Any], count: int
+    client: TestClient, context: dict[str, Any], count: int,
 ) -> None:
     """Create games with specific names (from table)."""
     # This will be called after the table is parsed
-    pass
 
 
 @when("I create 3 new games named:")
-def create_three_named_games(client: TestClient, context: Dict[str, Any]) -> None:
+def create_three_named_games(client: TestClient, context: dict[str, Any]) -> None:
     """Create 3 games and store them by name."""
     for name in ["game_a", "game_b", "game_c"]:
         response = client.post("/new-game")
@@ -155,7 +152,7 @@ def create_three_named_games(client: TestClient, context: Dict[str, Any]) -> Non
 
 
 @given("I create 3 new games")
-def given_create_three_games(client: TestClient, context: Dict[str, Any]) -> None:
+def given_create_three_games(client: TestClient, context: dict[str, Any]) -> None:
     """Create 3 games without names."""
     game_ids = []
     for _ in range(3):
@@ -166,7 +163,7 @@ def given_create_three_games(client: TestClient, context: Dict[str, Any]) -> Non
 
 
 @given("I create 3 new games named:")
-def given_create_three_named_games(client: TestClient, context: Dict[str, Any]) -> None:
+def given_create_three_named_games(client: TestClient, context: dict[str, Any]) -> None:
     """Create 3 games and store them by name."""
     for name in ["game_a", "game_b", "game_c"]:
         response = client.post("/new-game")
@@ -177,7 +174,7 @@ def given_create_three_named_games(client: TestClient, context: Dict[str, Any]) 
 
 @given(parsers.parse("I create {count:d} new games"))
 def given_create_multiple_games(
-    client: TestClient, context: Dict[str, Any], count: int
+    client: TestClient, context: dict[str, Any], count: int,
 ) -> None:
     """Create multiple games in given step."""
     create_multiple_games(client, context, count)
@@ -185,7 +182,7 @@ def given_create_multiple_games(
 
 @given(parsers.parse('I submit action "{action}" by player "{player}" in each game'))
 def given_submit_action_to_each_game(
-    client: TestClient, context: Dict[str, Any], action: str, player: str
+    client: TestClient, context: dict[str, Any], action: str, player: str,
 ) -> None:
     """Submit same action to all games (given step)."""
     submit_action_to_each_game(client, context, action, player)
@@ -197,7 +194,7 @@ def given_submit_action_to_each_game(
 
 
 @when("I get the game state")
-def get_game_state(client: TestClient, context: Dict[str, Any]) -> None:
+def get_game_state(client: TestClient, context: dict[str, Any]) -> None:
     """Get the current game state."""
     game_id = context.get("current_game_id")
     response = client.get(f"/state/{game_id}")
@@ -207,14 +204,14 @@ def get_game_state(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @given(parsers.parse('the game phase is "{phase}"'))
-def game_phase_is(context: Dict[str, Any], phase: str) -> None:
+def game_phase_is(context: dict[str, Any], phase: str) -> None:
     """Verify game is in expected phase."""
     # This is validated by the get_game_state step
     context["expected_phase"] = phase
 
 
 @given(parsers.parse('the game is in "{phase}" phase'))
-def game_is_in_phase(context: Dict[str, Any], phase: str) -> None:
+def game_is_in_phase(context: dict[str, Any], phase: str) -> None:
     """Set expected game phase."""
     context["expected_phase"] = phase
 
@@ -226,12 +223,12 @@ def game_is_in_phase(context: Dict[str, Any], phase: str) -> None:
 
 @when(parsers.parse('I submit action "{action}" by player "{player}"'))
 def submit_action(
-    client: TestClient, context: Dict[str, Any], action: str, player: str
+    client: TestClient, context: dict[str, Any], action: str, player: str,
 ) -> None:
     """Submit a single action."""
     game_id = context.get("current_game_id")
     response = client.post(
-        "/action", json={"game_id": game_id, "actor_id": player, "action": action}
+        "/action", json={"game_id": game_id, "actor_id": player, "action": action},
     )
     context["last_response"] = response
     context["actions"].append({"player": player, "action": action})
@@ -239,14 +236,14 @@ def submit_action(
 
 @given(parsers.parse('I submit action "{action}" by player "{player}"'))
 def given_submit_action(
-    client: TestClient, context: Dict[str, Any], action: str, player: str
+    client: TestClient, context: dict[str, Any], action: str, player: str,
 ) -> None:
     """Submit action in given step."""
     submit_action(client, context, action, player)
 
 
 @when("I submit the following actions:")
-def submit_multiple_actions(client: TestClient, context: Dict[str, Any], datatable) -> None:
+def submit_multiple_actions(client: TestClient, context: dict[str, Any], datatable) -> None:
     """Submit multiple actions from table."""
     game_id = context.get("current_game_id")
     # datatable is a list of lists, first row is headers
@@ -255,7 +252,7 @@ def submit_multiple_actions(client: TestClient, context: Dict[str, Any], datatab
         actor_id = row[headers.index("actor_id")]
         action = row[headers.index("action")]
         response = client.post(
-            "/action", json={"game_id": game_id, "actor_id": actor_id, "action": action}
+            "/action", json={"game_id": game_id, "actor_id": actor_id, "action": action},
         )
         assert response.status_code == 200
 
@@ -263,7 +260,7 @@ def submit_multiple_actions(client: TestClient, context: Dict[str, Any], datatab
 @when(parsers.parse('I submit action "{action}" by player "{player}" in game "{game_name}"'))
 def submit_action_to_named_game(
     client: TestClient,
-    context: Dict[str, Any],
+    context: dict[str, Any],
     action: str,
     player: str,
     game_name: str,
@@ -271,26 +268,26 @@ def submit_action_to_named_game(
     """Submit action to a specific named game."""
     game_id = context["games"][game_name]
     response = client.post(
-        "/action", json={"game_id": game_id, "actor_id": player, "action": action}
+        "/action", json={"game_id": game_id, "actor_id": player, "action": action},
     )
     assert response.status_code == 200
 
 
 @given('I submit action "{action}" by player "{player}" in each game')
 def submit_action_to_each_game(
-    client: TestClient, context: Dict[str, Any], action: str, player: str
+    client: TestClient, context: dict[str, Any], action: str, player: str,
 ) -> None:
     """Submit same action to all games."""
     for game_id in context.get("game_ids", []):
         response = client.post(
-            "/action", json={"game_id": game_id, "actor_id": player, "action": action}
+            "/action", json={"game_id": game_id, "actor_id": player, "action": action},
         )
         assert response.status_code == 200
 
 
 @when(parsers.parse("I submit {count:d} actions rapidly from the same player"))
 def submit_rapid_actions(
-    client: TestClient, context: Dict[str, Any], count: int
+    client: TestClient, context: dict[str, Any], count: int,
 ) -> None:
     """Submit many actions quickly."""
     game_id = context.get("current_game_id")
@@ -303,17 +300,17 @@ def submit_rapid_actions(
 
 
 @when("I submit an action with empty action string")
-def submit_empty_action(client: TestClient, context: Dict[str, Any]) -> None:
+def submit_empty_action(client: TestClient, context: dict[str, Any]) -> None:
     """Submit action with empty string."""
     game_id = context.get("current_game_id")
     response = client.post(
-        "/action", json={"game_id": game_id, "actor_id": "player1", "action": ""}
+        "/action", json={"game_id": game_id, "actor_id": "player1", "action": ""},
     )
     context["last_response"] = response
 
 
 @when("I submit 5 actions to each game concurrently")
-def submit_concurrent_actions(client: TestClient, context: Dict[str, Any]) -> None:
+def submit_concurrent_actions(client: TestClient, context: dict[str, Any]) -> None:
     """Submit actions to multiple games (simulated concurrency)."""
     responses = []
     for game_id in context.get("game_ids", []):
@@ -331,17 +328,15 @@ def submit_concurrent_actions(client: TestClient, context: Dict[str, Any]) -> No
 
 
 @when("I submit the following actions rapidly:")
-def submit_actions_rapidly(client: TestClient, context: Dict[str, Any]) -> None:
+def submit_actions_rapidly(client: TestClient, context: dict[str, Any]) -> None:
     """Submit actions from table rapidly."""
     # Will be implemented with table parsing
-    pass
 
 
 @when("I simulate a complete game day with the following actions:")
-def simulate_game_day(client: TestClient, context: Dict[str, Any]) -> None:
+def simulate_game_day(client: TestClient, context: dict[str, Any]) -> None:
     """Simulate complete game day scenario."""
     # Will be implemented with table parsing
-    pass
 
 
 # ============================================================================
@@ -350,7 +345,7 @@ def simulate_game_day(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @when("I end the game")
-def end_game(client: TestClient, context: Dict[str, Any]) -> None:
+def end_game(client: TestClient, context: dict[str, Any]) -> None:
     """End the current game."""
     game_id = context.get("current_game_id")
     response = client.post("/end-game", json={"game_id": game_id})
@@ -358,7 +353,7 @@ def end_game(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @when("I end the first game")
-def end_first_game(client: TestClient, context: Dict[str, Any]) -> None:
+def end_first_game(client: TestClient, context: dict[str, Any]) -> None:
     """End the first game in the list."""
     game_id = context["game_ids"][0]
     client.post("/end-game", json={"game_id": game_id})
@@ -367,7 +362,7 @@ def end_first_game(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @when("I try to end the same game again")
-def try_end_game_again(client: TestClient, context: Dict[str, Any]) -> None:
+def try_end_game_again(client: TestClient, context: dict[str, Any]) -> None:
     """Attempt to end already ended game."""
     game_id = context.get("current_game_id")
     response = client.post("/end-game", json={"game_id": game_id})
@@ -375,7 +370,7 @@ def try_end_game_again(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @when("I end 3 games randomly")
-def end_random_games(client: TestClient, context: Dict[str, Any]) -> None:
+def end_random_games(client: TestClient, context: dict[str, Any]) -> None:
     """End 3 games from the list."""
     games_to_end = context["game_ids"][:3]
     for game_id in games_to_end:
@@ -390,7 +385,7 @@ def end_random_games(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @when("I try to get the game state")
-def try_get_game_state(client: TestClient, context: Dict[str, Any]) -> None:
+def try_get_game_state(client: TestClient, context: dict[str, Any]) -> None:
     """Attempt to get game state (may fail)."""
     game_id = context.get("current_game_id", "non-existent")
     response = client.get(f"/state/{game_id}")
@@ -398,7 +393,7 @@ def try_get_game_state(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @when("I try to get the state of a non-existent game")
-def get_nonexistent_game_state(client: TestClient, context: Dict[str, Any]) -> None:
+def get_nonexistent_game_state(client: TestClient, context: dict[str, Any]) -> None:
     """Try to get state of game that doesn't exist."""
     response = client.get("/state/non-existent-game-id")
     context["last_response"] = response
@@ -406,23 +401,23 @@ def get_nonexistent_game_state(client: TestClient, context: Dict[str, Any]) -> N
 
 @when(parsers.parse('I try to submit action "{action}" by player "{player}"'))
 def try_submit_action(
-    client: TestClient, context: Dict[str, Any], action: str, player: str
+    client: TestClient, context: dict[str, Any], action: str, player: str,
 ) -> None:
     """Try to submit action (may fail)."""
     game_id = context.get("current_game_id", "non-existent")
     response = client.post(
-        "/action", json={"game_id": game_id, "actor_id": player, "action": action}
+        "/action", json={"game_id": game_id, "actor_id": player, "action": action},
     )
     context["last_response"] = response
 
 
 @when(
     parsers.parse(
-        'I try to submit action "{action}" by player "{player}" to a non-existent game'
-    )
+        'I try to submit action "{action}" by player "{player}" to a non-existent game',
+    ),
 )
 def try_submit_to_nonexistent(
-    client: TestClient, context: Dict[str, Any], action: str, player: str
+    client: TestClient, context: dict[str, Any], action: str, player: str,
 ) -> None:
     """Try to submit action to non-existent game."""
     response = client.post(
@@ -433,7 +428,7 @@ def try_submit_to_nonexistent(
 
 
 @when("I try to end a non-existent game")
-def try_end_nonexistent_game(client: TestClient, context: Dict[str, Any]) -> None:
+def try_end_nonexistent_game(client: TestClient, context: dict[str, Any]) -> None:
     """Try to end game that doesn't exist."""
     response = client.post("/end-game", json={"game_id": "non-existent"})
     context["last_response"] = response
@@ -445,7 +440,7 @@ def try_end_nonexistent_game(client: TestClient, context: Dict[str, Any]) -> Non
 
 
 @given("I connect to the game WebSocket")
-def connect_websocket(client: TestClient, context: Dict[str, Any]) -> None:
+def connect_websocket(client: TestClient, context: dict[str, Any]) -> None:
     """Connect to game WebSocket."""
     game_id = context.get("current_game_id")
     ws = client.websocket_connect(f"/ws/{game_id}")
@@ -454,14 +449,14 @@ def connect_websocket(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @when("I connect to the game WebSocket")
-def when_connect_websocket(client: TestClient, context: Dict[str, Any]) -> None:
+def when_connect_websocket(client: TestClient, context: dict[str, Any]) -> None:
     """Connect to game WebSocket (when step)."""
     connect_websocket(client, context)
 
 
 @given(parsers.parse("I connect {count:d} clients to the game WebSocket"))
 def connect_multiple_websockets(
-    client: TestClient, context: Dict[str, Any], count: int
+    client: TestClient, context: dict[str, Any], count: int,
 ) -> None:
     """Connect multiple WebSocket clients."""
     game_id = context.get("current_game_id")
@@ -473,13 +468,13 @@ def connect_multiple_websockets(
 
 
 @given("I connect 2 clients to the game WebSocket")
-def connect_two_websockets(client: TestClient, context: Dict[str, Any]) -> None:
+def connect_two_websockets(client: TestClient, context: dict[str, Any]) -> None:
     """Connect 2 WebSocket clients."""
     connect_multiple_websockets(client, context, 2)
 
 
 @when("I disconnect from the WebSocket")
-def disconnect_websocket(context: Dict[str, Any]) -> None:
+def disconnect_websocket(context: dict[str, Any]) -> None:
     """Disconnect the current WebSocket."""
     ws = context.get("current_ws")
     if ws:
@@ -489,7 +484,7 @@ def disconnect_websocket(context: Dict[str, Any]) -> None:
 
 
 @when("I try to connect to WebSocket for a non-existent game")
-def connect_nonexistent_websocket(client: TestClient, context: Dict[str, Any]) -> None:
+def connect_nonexistent_websocket(client: TestClient, context: dict[str, Any]) -> None:
     """Try to connect to WebSocket for non-existent game."""
     ws = client.websocket_connect("/ws/non-existent")
     context["current_ws"] = ws
@@ -501,7 +496,7 @@ def connect_nonexistent_websocket(client: TestClient, context: Dict[str, Any]) -
 
 
 @then("the game should be created successfully")
-def game_created_successfully(context: Dict[str, Any]) -> None:
+def game_created_successfully(context: dict[str, Any]) -> None:
     """Verify game was created."""
     response = context["last_response"]
     assert response.status_code == 200
@@ -509,13 +504,13 @@ def game_created_successfully(context: Dict[str, Any]) -> None:
 
 
 @then(parsers.parse("all {count:d} games should be created successfully"))
-def all_games_created(context: Dict[str, Any], count: int) -> None:
+def all_games_created(context: dict[str, Any], count: int) -> None:
     """Verify all games were created."""
     assert len(context.get("game_ids", [])) == count
 
 
 @then("each game should have a unique identifier")
-def each_game_unique(context: Dict[str, Any]) -> None:
+def each_game_unique(context: dict[str, Any]) -> None:
     """Verify all game IDs are unique."""
     game_ids = context.get("game_ids", [])
     assert len(game_ids) == len(set(game_ids))
@@ -527,7 +522,7 @@ def each_game_unique(context: Dict[str, Any]) -> None:
 
 
 @then(parsers.parse('the game phase should be "{phase}"'))
-def game_phase_should_be(client: TestClient, context: Dict[str, Any], phase: str) -> None:
+def game_phase_should_be(client: TestClient, context: dict[str, Any], phase: str) -> None:
     """Verify game phase."""
     # Always get fresh state to ensure we have the latest
     game_id = context.get("current_game_id")
@@ -538,13 +533,13 @@ def game_phase_should_be(client: TestClient, context: Dict[str, Any], phase: str
 
 
 @then(parsers.parse('the phase should be "{phase}"'))
-def phase_should_be(client: TestClient, context: Dict[str, Any], phase: str) -> None:
+def phase_should_be(client: TestClient, context: dict[str, Any], phase: str) -> None:
     """Verify phase in current state."""
     game_phase_should_be(client, context, phase)
 
 
 @then("the actions list should be empty")
-def actions_list_empty(context: Dict[str, Any]) -> None:
+def actions_list_empty(context: dict[str, Any]) -> None:
     """Verify actions list is empty."""
     state = context.get("current_state")
     assert state is not None
@@ -552,7 +547,7 @@ def actions_list_empty(context: Dict[str, Any]) -> None:
 
 
 @then(parsers.parse('the actions list should contain "{action}"'))
-def actions_list_contains(client: TestClient, context: Dict[str, Any], action: str) -> None:
+def actions_list_contains(client: TestClient, context: dict[str, Any], action: str) -> None:
     """Verify action is in list."""
     # Get fresh state to ensure we have latest actions
     game_id = context.get("current_game_id")
@@ -563,15 +558,14 @@ def actions_list_contains(client: TestClient, context: Dict[str, Any], action: s
 
 
 @then("the actions list should contain all submitted actions")
-def actions_contain_all_submitted(context: Dict[str, Any]) -> None:
+def actions_contain_all_submitted(context: dict[str, Any]) -> None:
     """Verify all submitted actions are present."""
     # This will be validated with table data
-    pass
 
 
 @then(parsers.parse('game "{game_name}" should only contain action "{action}"'))
 def game_contains_only_action(
-    client: TestClient, context: Dict[str, Any], game_name: str, action: str
+    client: TestClient, context: dict[str, Any], game_name: str, action: str,
 ) -> None:
     """Verify game has only specific action."""
     game_id = context["games"][game_name]
@@ -582,14 +576,13 @@ def game_contains_only_action(
 
 
 @then("all actions should be recorded in order")
-def actions_recorded_in_order(context: Dict[str, Any]) -> None:
+def actions_recorded_in_order(context: dict[str, Any]) -> None:
     """Verify actions maintain order."""
     # Validated by later assertions
-    pass
 
 
 @then("the game should remain in a valid state")
-def game_valid_state(client: TestClient, context: Dict[str, Any]) -> None:
+def game_valid_state(client: TestClient, context: dict[str, Any]) -> None:
     """Verify game is still in valid state."""
     game_id = context.get("current_game_id")
     response = client.get(f"/state/{game_id}")
@@ -597,10 +590,9 @@ def game_valid_state(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @then("the game should maintain state consistency")
-def game_maintains_consistency(context: Dict[str, Any]) -> None:
+def game_maintains_consistency(context: dict[str, Any]) -> None:
     """Verify game state is consistent."""
     # Implicitly validated by other assertions
-    pass
 
 
 # ============================================================================
@@ -609,7 +601,7 @@ def game_maintains_consistency(context: Dict[str, Any]) -> None:
 
 
 @then("the game should appear in the active games list")
-def game_in_active_list(client: TestClient, context: Dict[str, Any]) -> None:
+def game_in_active_list(client: TestClient, context: dict[str, Any]) -> None:
     """Verify game is in games list."""
     game_id = context.get("current_game_id")
     response = client.get("/games")
@@ -618,7 +610,7 @@ def game_in_active_list(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @then("the game should not appear in the active games list")
-def game_not_in_active_list(client: TestClient, context: Dict[str, Any]) -> None:
+def game_not_in_active_list(client: TestClient, context: dict[str, Any]) -> None:
     """Verify game is not in games list."""
     game_id = context.get("current_game_id")
     response = client.get("/games")
@@ -641,7 +633,7 @@ def games_list_exactly_count(client: TestClient, count: int) -> None:
 
 
 @then("the game should be ended successfully")
-def game_ended_successfully(context: Dict[str, Any]) -> None:
+def game_ended_successfully(context: dict[str, Any]) -> None:
     """Verify game ended."""
     response = context["last_response"]
     assert response.status_code == 200
@@ -649,7 +641,7 @@ def game_ended_successfully(context: Dict[str, Any]) -> None:
 
 
 @then("the remaining games should still be accessible")
-def remaining_games_accessible(client: TestClient, context: Dict[str, Any]) -> None:
+def remaining_games_accessible(client: TestClient, context: dict[str, Any]) -> None:
     """Verify remaining games work."""
     for game_id in context.get("game_ids", []):
         response = client.get(f"/state/{game_id}")
@@ -658,7 +650,7 @@ def remaining_games_accessible(client: TestClient, context: Dict[str, Any]) -> N
 
 @then("the remaining games should retain their actions")
 def remaining_games_have_actions(
-    client: TestClient, context: Dict[str, Any]
+    client: TestClient, context: dict[str, Any],
 ) -> None:
     """Verify actions preserved in remaining games."""
     for game_id in context.get("game_ids", []):
@@ -683,7 +675,7 @@ def all_listed_accessible(client: TestClient) -> None:
 
 
 @then("the action should be recorded successfully")
-def action_recorded_successfully(context: Dict[str, Any]) -> None:
+def action_recorded_successfully(context: dict[str, Any]) -> None:
     """Verify action was recorded."""
     response = context["last_response"]
     assert response.status_code == 200
@@ -691,7 +683,7 @@ def action_recorded_successfully(context: Dict[str, Any]) -> None:
 
 
 @then("the action should still be recorded")
-def action_still_recorded(client: TestClient, context: Dict[str, Any]) -> None:
+def action_still_recorded(client: TestClient, context: dict[str, Any]) -> None:
     """Verify action was recorded despite issues."""
     game_id = context.get("current_game_id")
     response = client.get(f"/state/{game_id}")
@@ -701,7 +693,7 @@ def action_still_recorded(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @then("both actions should be recorded")
-def both_actions_recorded(client: TestClient, context: Dict[str, Any]) -> None:
+def both_actions_recorded(client: TestClient, context: dict[str, Any]) -> None:
     """Verify both actions present."""
     game_id = context.get("current_game_id")
     response = client.get(f"/state/{game_id}")
@@ -710,7 +702,7 @@ def both_actions_recorded(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @then(parsers.parse("all {count:d} actions should be recorded"))
-def all_actions_recorded(client: TestClient, context: Dict[str, Any], count: int) -> None:
+def all_actions_recorded(client: TestClient, context: dict[str, Any], count: int) -> None:
     """Verify specific action count."""
     game_id = context.get("current_game_id")
     response = client.get(f"/state/{game_id}")
@@ -719,7 +711,7 @@ def all_actions_recorded(client: TestClient, context: Dict[str, Any], count: int
 
 
 @then("the actions should be in the correct order")
-def actions_in_order(client: TestClient, context: Dict[str, Any]) -> None:
+def actions_in_order(client: TestClient, context: dict[str, Any]) -> None:
     """Verify action ordering."""
     game_id = context.get("current_game_id")
     response = client.get(f"/state/{game_id}")
@@ -732,7 +724,7 @@ def actions_in_order(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @then("all games should have exactly 5 actions")
-def all_games_five_actions(client: TestClient, context: Dict[str, Any]) -> None:
+def all_games_five_actions(client: TestClient, context: dict[str, Any]) -> None:
     """Verify each game has 5 actions."""
     for game_id in context.get("game_ids", []):
         response = client.get(f"/state/{game_id}")
@@ -741,10 +733,9 @@ def all_games_five_actions(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @then("no actions should be lost or duplicated")
-def no_actions_lost(context: Dict[str, Any]) -> None:
+def no_actions_lost(context: dict[str, Any]) -> None:
     """Verify action integrity."""
     # Validated by the count checks
-    pass
 
 
 # ============================================================================
@@ -753,24 +744,23 @@ def no_actions_lost(context: Dict[str, Any]) -> None:
 
 
 @then("I should receive a 404 error")
-def should_receive_404(context: Dict[str, Any]) -> None:
+def should_receive_404(context: dict[str, Any]) -> None:
     """Verify 404 error received."""
     response = context["last_response"]
     assert response.status_code == 404
 
 
 @then(parsers.parse('the error message should be "{message}"'))
-def error_message_should_be(context: Dict[str, Any], message: str) -> None:
+def error_message_should_be(context: dict[str, Any], message: str) -> None:
     """Verify error message."""
     response = context["last_response"]
     assert response.json()["detail"] == message
 
 
 @then("no errors should be logged")
-def no_errors_logged(context: Dict[str, Any]) -> None:
+def no_errors_logged(context: dict[str, Any]) -> None:
     """Verify no errors occurred."""
     # In a real scenario, check logs
-    pass
 
 
 # ============================================================================
@@ -779,7 +769,7 @@ def no_errors_logged(context: Dict[str, Any]) -> None:
 
 
 @then("I should receive a WebSocket update within 2 seconds")
-def receive_websocket_update(context: Dict[str, Any]) -> None:
+def receive_websocket_update(context: dict[str, Any]) -> None:
     """Verify WebSocket update received.
 
     Note: BDD WebSocket tests are skipped due to context manager limitations.
@@ -789,7 +779,7 @@ def receive_websocket_update(context: Dict[str, Any]) -> None:
 
 
 @then("the WebSocket message should contain the updated game state")
-def websocket_has_updated_state(context: Dict[str, Any]) -> None:
+def websocket_has_updated_state(context: dict[str, Any]) -> None:
     """Verify WebSocket message has state."""
     messages = context.get("websocket_messages", [])
     assert len(messages) > 0
@@ -797,7 +787,7 @@ def websocket_has_updated_state(context: Dict[str, Any]) -> None:
 
 
 @then(parsers.parse('the WebSocket message should include "{action}" in actions'))
-def websocket_includes_action(context: Dict[str, Any], action: str) -> None:
+def websocket_includes_action(context: dict[str, Any], action: str) -> None:
     """Verify action in WebSocket message."""
     messages = context.get("websocket_messages", [])
     assert len(messages) > 0
@@ -805,39 +795,37 @@ def websocket_includes_action(context: Dict[str, Any], action: str) -> None:
 
 
 @then(parsers.parse("all {count:d} clients should receive the update"))
-def all_clients_receive_update(context: Dict[str, Any], count: int) -> None:
+def all_clients_receive_update(context: dict[str, Any], count: int) -> None:
     """Verify all WebSocket clients got update."""
     pytest.skip("WebSocket testing in BDD context not supported - see test_websocket_async.py")
 
 
 @then("each client should receive identical state information")
-def each_client_identical_state(context: Dict[str, Any]) -> None:
+def each_client_identical_state(context: dict[str, Any]) -> None:
     """Verify all clients got same state."""
     # Already validated by previous step
-    pass
 
 
 @then("the update should be received within 2 seconds")
-def update_within_timeout(context: Dict[str, Any]) -> None:
+def update_within_timeout(context: dict[str, Any]) -> None:
     """Verify update timing."""
     # Already validated by timeout in receive
-    pass
 
 
 @then(parsers.parse('I should receive the update for "{action}"'))
-def should_receive_action_update(context: Dict[str, Any], action: str) -> None:
+def should_receive_action_update(context: dict[str, Any], action: str) -> None:
     """Verify specific action update."""
     pytest.skip("WebSocket testing in BDD context not supported - see test_websocket_async.py")
 
 
 @then(parsers.parse("I should receive {count:d} WebSocket updates"))
-def receive_multiple_updates(context: Dict[str, Any], count: int) -> None:
+def receive_multiple_updates(context: dict[str, Any], count: int) -> None:
     """Verify multiple updates received."""
     pytest.skip("WebSocket testing in BDD context not supported - see test_websocket_async.py")
 
 
 @then("each update should reflect the cumulative state")
-def updates_reflect_cumulative(context: Dict[str, Any]) -> None:
+def updates_reflect_cumulative(context: dict[str, Any]) -> None:
     """Verify updates show cumulative state."""
     messages = context.get("websocket_messages", [])
     # Each message should have progressively more actions
@@ -846,7 +834,7 @@ def updates_reflect_cumulative(context: Dict[str, Any]) -> None:
 
 
 @then("both WebSocket connections should be closed")
-def websockets_closed(context: Dict[str, Any]) -> None:
+def websockets_closed(context: dict[str, Any]) -> None:
     """Verify WebSocket connections closed."""
     websockets = context.get("websockets", [])
     for ws in websockets:
@@ -855,29 +843,27 @@ def websockets_closed(context: Dict[str, Any]) -> None:
             pytest.fail("WebSocket should be closed")
         except WebSocketDisconnect:
             pass  # Expected
-        except Exception:
-            pass  # May already be closed
+        except (RuntimeError, AttributeError):
+            pass  # May already be closed or connection disposed
 
 
 @then("clients should receive a close notification")
-def clients_receive_close(context: Dict[str, Any]) -> None:
+def clients_receive_close(context: dict[str, Any]) -> None:
     """Verify close notification."""
     # Already validated by connection close
-    pass
 
 
 @then("the WebSocket connection should be accepted")
-def websocket_accepted(context: Dict[str, Any]) -> None:
+def websocket_accepted(context: dict[str, Any]) -> None:
     """Verify WebSocket was accepted."""
     ws = context.get("current_ws")
     assert ws is not None
 
 
 @then("no updates should be received")
-def no_updates_received(context: Dict[str, Any]) -> None:
+def no_updates_received(context: dict[str, Any]) -> None:
     """Verify no WebSocket updates."""
     # This is implicitly true for non-existent games
-    pass
 
 
 # ============================================================================
@@ -886,7 +872,7 @@ def no_updates_received(context: Dict[str, Any]) -> None:
 
 
 @then("the response should not expose player roles")
-def roles_not_exposed(context: Dict[str, Any]) -> None:
+def roles_not_exposed(context: dict[str, Any]) -> None:
     """Verify roles are hidden."""
     state = context.get("current_state")
     assert state is not None
@@ -896,7 +882,7 @@ def roles_not_exposed(context: Dict[str, Any]) -> None:
 
 
 @then("the state should only contain public information")
-def only_public_info(context: Dict[str, Any]) -> None:
+def only_public_info(context: dict[str, Any]) -> None:
     """Verify only public data exposed."""
     state = context.get("current_state")
     assert "state" in state
@@ -908,11 +894,8 @@ def only_public_info(context: Dict[str, Any]) -> None:
 
 
 @then(parsers.parse('the server should maintain "{player}" as "{role}" internally'))
-def server_maintains_role(context: Dict[str, Any], player: str, role: str) -> None:
+def server_maintains_role(context: dict[str, Any], player: str, role: str) -> None:
     """Verify server has correct internal role."""
-    from wolfai import api
-    from wolfai.arena import Role
-
     game_id = context.get("current_game_id")
     arena = api._games.get(game_id)
     assert arena is not None
@@ -921,7 +904,7 @@ def server_maintains_role(context: Dict[str, Any], player: str, role: str) -> No
 
 
 @then("roles should remain hidden in the public view")
-def roles_remain_hidden(client: TestClient, context: Dict[str, Any]) -> None:
+def roles_remain_hidden(client: TestClient, context: dict[str, Any]) -> None:
     """Verify roles still hidden."""
     game_id = context.get("current_game_id")
     response = client.get(f"/state/{game_id}")
@@ -930,14 +913,13 @@ def roles_remain_hidden(client: TestClient, context: Dict[str, Any]) -> None:
 
 
 @then("roles should never be exposed through the API")
-def roles_never_exposed(context: Dict[str, Any]) -> None:
+def roles_never_exposed(context: dict[str, Any]) -> None:
     """Verify roles never leaked."""
     # Validated throughout test execution
-    pass
 
 
 @then("the actions list should not reveal which player acted")
-def actions_no_player_reveal(context: Dict[str, Any]) -> None:
+def actions_no_player_reveal(context: dict[str, Any]) -> None:
     """Verify actions don't show actor."""
     state = context.get("current_state")
     # Actions are just strings without actor_id

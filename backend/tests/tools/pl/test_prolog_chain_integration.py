@@ -14,7 +14,7 @@ class TestPrologChainIntegration:
         # Execute the full chain
         result = await mock_session.get_prompt(
             "prolog-reasoning",
-            {"question": question}
+            {"question": question},
         )
 
         # Verify the message sequence
@@ -45,7 +45,7 @@ class TestPrologChainIntegration:
 
         result = await mock_session.get_prompt(
             "prolog-reasoning",
-            {"question": question}
+            {"question": question},
         )
 
         messages = result.messages
@@ -69,7 +69,7 @@ class TestPrologChainIntegration:
         # First convert to Prolog
         conversion = await mock_session.get_prompt(
             "convert-to-prolog",
-            {"question": "If all birds can fly, and tweety is a bird, can tweety fly?"}
+            {"question": "If all birds can fly, and tweety is a bird, can tweety fly?"},
         )
 
         assert len(conversion.messages) == 1
@@ -80,7 +80,7 @@ class TestPrologChainIntegration:
         # Then execute the Prolog code
         execution = await mock_session.call_tool(
             "consult",
-            {"code": prolog_code}
+            {"code": prolog_code},
         )
 
         assert execution["success"]
@@ -91,7 +91,7 @@ class TestPrologChainIntegration:
         # Test with unknown question pattern
         result = await mock_session.get_prompt(
             "prolog-reasoning",
-            {"question": "This is not a valid logical question"}
+            {"question": "This is not a valid logical question"},
         )
 
         # Should still get a valid response structure
@@ -100,7 +100,7 @@ class TestPrologChainIntegration:
         # Test with invalid Prolog code
         execution = await mock_session.call_tool(
             "consult",
-            {"code": "this is not valid Prolog code"}
+            {"code": "this is not valid Prolog code"},
         )
 
         assert not execution["success"]
@@ -113,14 +113,14 @@ class TestPrologChainIntegration:
         # Step 1: Convert to Prolog
         conversion = await mock_session.get_prompt(
             "convert-to-prolog",
-            {"question": question}
+            {"question": question},
         )
         prolog_code = conversion.messages[0].content.text
 
         # Step 2: Execute the code
         execution = await mock_session.call_tool(
             "consult",
-            {"code": prolog_code}
+            {"code": prolog_code},
         )
 
         # Step 3: Interpret results
@@ -129,11 +129,12 @@ class TestPrologChainIntegration:
             {
                 "question": question,
                 "prolog_code": prolog_code,
-                "results": str(execution)
-            }
+                "results": str(execution),
+            },
         )
 
         # Verify the complete chain
-        assert prolog_code and "mortal" in prolog_code
+        assert prolog_code
+        assert "mortal" in prolog_code
         assert execution["success"]
         assert interpretation.messages[-1].content.text

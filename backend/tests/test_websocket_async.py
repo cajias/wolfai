@@ -1,6 +1,6 @@
 """Async WebSocket tests using TestClient with async context."""
 
-from typing import Any, Dict, List
+from typing import Any
 
 from fastapi.testclient import TestClient
 
@@ -49,7 +49,7 @@ class TestAsyncWebSocket:
 
             # Connect multiple WebSocket clients
             with client.websocket_connect(
-                f"/ws/{game_id}"
+                f"/ws/{game_id}",
             ) as ws1, client.websocket_connect(f"/ws/{game_id}") as ws2:
                 # Submit an action
                 action_response = client.post(
@@ -79,7 +79,7 @@ class TestAsyncWebSocket:
             game_id = response.json()["game_id"]
 
             with client.websocket_connect(f"/ws/{game_id}") as websocket:
-                messages: List[Dict[str, Any]] = []
+                messages: list[dict[str, Any]] = []
 
                 # Submit multiple actions and collect messages
                 actions = ["action1", "action2", "action3"]

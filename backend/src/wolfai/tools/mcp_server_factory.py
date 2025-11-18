@@ -1,12 +1,16 @@
 """Factory for creating generic MCP servers from Python modules."""
 
 import inspect
-from collections.abc import Callable
-from typing import Any
+from typing import Any, Callable, Optional
 
 import anyio
+import uvicorn
 from mcp import types
 from mcp.server.lowlevel import Server
+from mcp.server.sse import SseServerTransport
+from mcp.server.stdio import stdio_server
+from starlette.applications import Starlette
+from starlette.routing import Mount, Route
 
 from wolfai.tools.mcp_utils import generate_from_module
 
@@ -17,7 +21,7 @@ PAIR_LENGTH = 2
 class ModuleServer:
     """A generic MCP server that can expose any module's functions."""
 
-    def __init__(self, module: Any, name: str, session_store: dict | None = None) -> None:
+    def __init__(self, module: Any, name: str, session_store: Optional[dict] = None) -> None:
         """Initialize the server with a module to expose.
 
         Args:
@@ -85,7 +89,9 @@ class ModuleServer:
 
             return self._format_result(result)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            # Broad exception catch is intentional: tool handler must be resilient
+            # to prevent server crashes from any tool execution errors
             return [types.TextContent(type="text", text=f"Error: {e!s}")]
 
     def create_server(self) -> Server:
@@ -104,10 +110,10 @@ class ModuleServer:
 
 def run_server(
     module: Any,
-    name: str | None = None,
+    name: Optional[str] = None,
     port: int = 8000,
     transport: str = "stdio",
-    session_store: dict | None = None,
+    session_store: Optional[dict] = None,
 ) -> None:
     """Run an MCP server for a module.
 
@@ -125,8 +131,6 @@ def run_server(
     app = server.create_server()
 
     if transport == "stdio":
-        from mcp.server.stdio import stdio_server
-
         async def arun() -> None:
             async with stdio_server() as streams:
                 await app.run(
@@ -135,13 +139,9 @@ def run_server(
 
         anyio.run(arun)
     else:
-        from mcp.server.sse import SseServerTransport
-        from starlette.applications import Starlette
-        from starlette.routing import Mount, Route
-
         sse = SseServerTransport("/messages/")
 
-        async def handle_sse(request) -> None:
+        async def handle_sse(request: Any) -> None:
             async with sse.connect_sse(
                 request.scope, request.receive, request._send,
             ) as streams:
@@ -157,6 +157,5 @@ def run_server(
             ],
         )
 
-        import uvicorn
         uvicorn.run(starlette_app, host="0.0.0.0", port=port)
 

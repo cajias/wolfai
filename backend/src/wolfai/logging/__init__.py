@@ -4,9 +4,7 @@ import logging
 import sys
 
 
-def configure_basic_logging(
-    level: int = logging.DEBUG, name: str | None = None,
-) -> logging.Logger:
+def configure_basic_logging(level: int = logging.DEBUG, name: str | None = None) -> logging.Logger:
     """Configure basic logging with standard format.
 
     Args:

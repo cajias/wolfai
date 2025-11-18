@@ -1,3 +1,5 @@
+"""Utilities to convert MCP tools to LangChain StructuredTools."""
+
 import asyncio
 import logging
 from typing import Any
@@ -29,16 +31,17 @@ async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredT
     """Fetch MCP tools and convert them to LangChain StructuredTools."""
     tools = await session.list_tools()
 
-    def create_tool(tool: mcp_types.Tool):
+    def create_tool(tool: mcp_types.Tool) -> StructuredTool:
 
         # Use **kwargs so the function accepts any named args (e.g. prolog=..., query=...)
         async def tool_function_sync(*args: Any, **kwargs: Any) -> mcp_types.CallToolResult:
-            """A synchronous function that:
-              - Accepts unlimited positional args (*args)
-              - Accepts unlimited keyword args (**kwargs)
-              - Merges them into a final dictionary
-              - Uses the tool's schema to decide how to handle the positional args
-              - Calls an async function with asyncio.run().
+            """A synchronous function that wraps MCP tool invocation.
+
+            - Accepts unlimited positional args (*args)
+            - Accepts unlimited keyword args (**kwargs)
+            - Merges them into a final dictionary
+            - Uses the tool's schema to decide how to handle the positional args
+            - Calls an async function with asyncio.run().
 
             Returns:
               The result of calling the MCP tool with the merged arguments.
@@ -63,7 +66,12 @@ async def get_mcp_tools_as_langchain(session: ClientSession) -> list[StructuredT
     return [t for t in structured_tools if t is not None]
 
 
-async def _parse_variadic_args(args, kwargs, props, required_fields):
+async def _parse_variadic_args(
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    props: dict[str, Any],
+    required_fields: list[str],
+) -> dict[str, Any]:
     final_args = dict(kwargs.items())
     # If the user provided positional arguments, decide how to handle them:
     if args:
@@ -73,7 +81,7 @@ async def _parse_variadic_args(args, kwargs, props, required_fields):
 
             # If that field is not in 'props', fallback or just assume it
             if field_name not in props:
-                logging.warning(f"Field '{field_name}' not found in properties. Using anyway.")
+                logging.warning("Field '%s' not found in properties. Using anyway.", field_name)
 
             # If there's exactly one positional argument, store it directly
             # If there's multiple, store them as a list, or handle them differently

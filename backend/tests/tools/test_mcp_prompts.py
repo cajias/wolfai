@@ -22,10 +22,10 @@ def create_test_prompt() -> MCPPrompt:
             types.PromptArgument(
                 name="test_arg",
                 description="A test argument",
-                required=True
-            )
+                required=True,
+            ),
         ],
-        messages=[create_text_message("assistant", "Test message")]
+        messages=[create_text_message("assistant", "Test message")],
     )
 
 
@@ -52,7 +52,7 @@ class TestPromptDecorator:
         def test_prompt() -> MCPPrompt:
             return create_test_prompt()
 
-        assert hasattr(test_prompt, '_is_mcp_prompt')
+        assert hasattr(test_prompt, "_is_mcp_prompt")
         assert test_prompt._is_mcp_prompt is True
 
     def test_decorator_with_name(self):
@@ -62,7 +62,7 @@ class TestPromptDecorator:
         def test_prompt() -> MCPPrompt:
             return create_test_prompt()
 
-        assert hasattr(test_prompt, '_mcp_prompt_name')
+        assert hasattr(test_prompt, "_mcp_prompt_name")
         assert test_prompt._mcp_prompt_name == "custom_name"
 
     def test_decorator_preserves_function(self):
@@ -99,7 +99,7 @@ class TestPromptConversion:
         def invalid_func() -> str:
             return "not a prompt"
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="must return MCPPrompt"):
             function_to_mcp_prompt(invalid_func)
 
 
@@ -120,13 +120,13 @@ class TestModulePrompts:
 
         prompt2 = prompt(prompt2)
 
-        def not_a_prompt():
+        def not_a_prompt() -> str:
             return "regular function"
 
-        module = type('TestModule', (), {
-            'prompt1': prompt1,
-            'prompt2': prompt2,
-            'not_a_prompt': not_a_prompt
+        module = type("TestModule", (), {
+            "prompt1": prompt1,
+            "prompt2": prompt2,
+            "not_a_prompt": not_a_prompt,
         })
 
         prompts = generate_prompts_from_module(module)
@@ -141,12 +141,12 @@ class TestModulePrompts:
 
         create_prompt = prompt(create_prompt)
 
-        module = type('TestModule', (), {
-            'prompt1': create_prompt,
-            'prompt2': create_prompt
+        module = type("TestModule", (), {
+            "prompt1": create_prompt,
+            "prompt2": create_prompt,
         })
 
-        prompts = generate_prompts_from_module(module, exclude=['prompt1'])
+        prompts = generate_prompts_from_module(module, exclude=["prompt1"])
         print(prompts)
         assert len(prompts) == 1
 
@@ -163,9 +163,9 @@ class TestModulePrompts:
 
         prompt_func = prompt(prompt_func)
 
-        module = type('TestModule', (), {
-            'tool_func': tool_func,
-            'prompt_func': prompt_func
+        module = type("TestModule", (), {
+            "tool_func": tool_func,
+            "prompt_func": prompt_func,
         })
 
         self.module = generate_from_module(module)
@@ -192,7 +192,7 @@ class TestErrorHandling:
         def invalid_prompt() -> MCPPrompt:
             return "not a prompt"  # Invalid return type
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="must return MCPPrompt"):
             function_to_mcp_prompt(invalid_prompt)
 
     def test_prompt_validation(self):
@@ -203,7 +203,7 @@ class TestErrorHandling:
                 name="test",
                 description="test",
                 arguments=[],
-                messages=[create_text_message("assistant", "test")]
+                messages=[create_text_message("assistant", "test")],
             )
 
         prompt_obj = test_prompt()

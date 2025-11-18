@@ -2,10 +2,11 @@
 
 import pytest
 
+
 # Skip entire module if SWI-Prolog is not available
 try:
     import pyswip  # noqa: F401
-except Exception:
+except (ImportError, OSError, Exception):  # noqa: BLE001
     pytest.skip("SWI-Prolog not available", allow_module_level=True)
 
 from tests.tools.pl.test_mcp_mock import MockMCPSession
@@ -166,8 +167,7 @@ class TestIntegration:
 
     @pytest.mark.asyncio
     async def test_chain_execution(self, mock_session):
-        """
-        Test the execution flow of the chain.
+        """Test the execution flow of the chain.
 
         This test requires a mock MCP session that provides:
         - prompt execution
@@ -179,7 +179,7 @@ class TestIntegration:
         # Get the chain prompt
         result = await mock_session.get_prompt(
             "prolog-reasoning",
-            arguments={"question": question}
+            arguments={"question": question},
         )
 
         # Verify the execution sequence
@@ -190,7 +190,7 @@ class TestIntegration:
         prolog_msg = next(
             (msg for msg in messages
              if msg.role == "assistant" and "mortal(X) :-" in msg.content.text),
-            None
+            None,
         )
         assert prolog_msg is not None
 

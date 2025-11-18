@@ -1,1 +1,2 @@
-"""WolfAI source code package."""
+"""WolfAI source package root."""
+# Your project's source code will go here
