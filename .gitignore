@@ -104,6 +104,9 @@ ENV/
 # mypy
 .mypy_cache/
 
+# Generated lint configs (from agentic-guardrails package)
+backend/python/
+
 # IDE settings
 .vscode/
 .idea/

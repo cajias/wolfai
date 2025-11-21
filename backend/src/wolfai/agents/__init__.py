@@ -13,6 +13,7 @@ def __getattr__(name: str) -> Any:
     """Lazy import for agents to avoid loading deprecated dependencies."""
     if name == "PrologAgent":
         from .prolog import PrologAgent
+
         return PrologAgent
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)
