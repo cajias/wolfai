@@ -312,7 +312,7 @@ def run_query(prolog: Prolog, query: str, namespace: str) -> PrologResult:
         # Extract meaningful part of error message
         error_msg = str(e)
         if "Caused by" in error_msg:
-            error_msg = error_msg.split("Caused by: ")[1].split("Returned:")[0].strip()
+            error_msg = error_msg.split("Caused by: ", maxsplit=1)[1].split("Returned:", maxsplit=1)[0].strip()
         return PrologResult(
             success=False,
             solutions=[],
